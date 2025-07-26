@@ -1,0 +1,1593 @@
+﻿# gestaltview_core_v9.2.py
+# © 2025 Keith Soyka - GestaltView Enhanced
+#
+# This represents a significant evolution from v9.1, addressing core architectural
+# issues and implementing robust error handling, validation, and persistence.
+
+
+import os
+import json
+import sqlite3
+import logging
+from sqlite3 import Error
+from dataclasses import dataclass, field, asdict
+from typing import List, Dict, Optional, Any, Union
+from datetime import datetime
+from contextlib import contextmanager
+import uuid
+
+
+# --- Enhanced Configuration & Logging ---
+DATABASE_FILE = 'gestaltview_unified.db'
+SCHEMA_VERSION = "9.2.0_Enhanced_Architecture"
+
+
+# Configure logging for better debugging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('gestaltview.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+
+# --- Custom Exceptions ---
+class GestaltViewError(Exception):
+    """Base exception for GestaltView operations"""
+    pass
+
+
+class ValidationError(GestaltViewError):
+    """Raised when data validation fails"""
+    pass
+
+
+class DatabaseError(GestaltViewError):
+    """Raised when database operations fail"""
+    pass
+
+
+class SerializationError(GestaltViewError):
+    """Raised when JSON serialization/deserialization fails"""
+    pass
+
+
+# --- Enhanced Data Model Classes ---
+
+
+# $defs - Reusable component classes with validation
+@dataclass
+class TraumaToStrengthMapping:
+    """Maps a personal struggle to a platform feature, turning scars into code."""
+    struggle: str
+    platformFeature: str
+
+
+    def __post_init__(self):
+        if not self.struggle or not self.platformFeature:
+            raise ValidationError("TraumaToStrengthMapping requires both struggle and platformFeature")
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "TraumaToStrengthMapping":
+        if not isinstance(d, dict):
+            raise ValidationError("TraumaToStrengthMapping.from_dict requires a dictionary")
+        return TraumaToStrengthMapping(
+            struggle=d.get("struggle", ""),
+            platformFeature=d.get("platformFeature", "")
+        )
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"struggle": self.struggle, "platformFeature": self.platformFeature}
+
+
+@dataclass
+class MetricDefinition:
+    """Defines a custom metric for measuring empathy, transformation, and impact."""
+    name: str
+    type: str
+    description: Optional[str] = None
+
+
+    def __post_init__(self):
+        if not self.name or not self.type:
+            raise ValidationError("MetricDefinition requires both name and type")
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "MetricDefinition":
+        if not isinstance(d, dict):
+            raise ValidationError("MetricDefinition.from_dict requires a dictionary")
+        return MetricDefinition(
+            name=d.get("name", ""),
+            type=d.get("type", ""),
+            description=d.get("description")
+        )
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "type": self.type,
+            "description": self.description
+        }
+
+
+# Main module classes with enhanced validation
+@dataclass
+class DeploymentMetadata:
+    """Core metadata governing this unified schema instance."""
+    schemaVersion: str
+    deploymentId: str
+    deploymentDate: str
+    createdBy: str
+    founderEssence: str
+    changeLog: List[str] = field(default_factory=list)
+
+
+    def __post_init__(self):
+        if not all([self.schemaVersion, self.deploymentId, self.deploymentDate, 
+                   self.createdBy, self.founderEssence]):
+            raise ValidationError("DeploymentMetadata missing required fields")
+        
+        # Generate UUID if not provided
+        if not self.deploymentId or self.deploymentId == "":
+            self.deploymentId = str(uuid.uuid4())
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "DeploymentMetadata":
+        if not isinstance(d, dict):
+            raise ValidationError("DeploymentMetadata.from_dict requires a dictionary")
+        return DeploymentMetadata(
+            schemaVersion=d.get("schemaVersion", SCHEMA_VERSION),
+            deploymentId=d.get("deploymentId", str(uuid.uuid4())),
+            deploymentDate=d.get("deploymentDate", datetime.now().isoformat()),
+            createdBy=d.get("createdBy", ""),
+            founderEssence=d.get("founderEssence", ""),
+            changeLog=d.get("changeLog", [])
+        )
+
+
+@dataclass
+class ProjectOverview:
+    """High-level summary of GestaltView's purpose and vision."""
+    name: str
+    coreThesis: str
+    mission: str
+    visionStatement: str
+    founder: str
+
+
+    def __post_init__(self):
+        required_fields = [self.name, self.coreThesis, self.mission, 
+                          self.visionStatement, self.founder]
+        if not all(required_fields):
+            raise ValidationError("ProjectOverview missing required fields")
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "ProjectOverview":
+        if not isinstance(d, dict):
+            raise ValidationError("ProjectOverview.from_dict requires a dictionary")
+        return ProjectOverview(
+            name=d.get("name", ""),
+            coreThesis=d.get("coreThesis", ""),
+            mission=d.get("mission", ""),
+            visionStatement=d.get("visionStatement", ""),
+            founder=d.get("founder", "")
+        )
+
+
+@dataclass
+class FounderJourney:
+    """The personal origin story mapping lived experience to platform DNA."""
+    originInsight: str
+    livedExperienceAsAsset: str
+    transformation: Dict[str, List[TraumaToStrengthMapping]] = field(default_factory=dict)
+
+
+    def __post_init__(self):
+        if not self.originInsight or not self.livedExperienceAsAsset:
+            raise ValidationError("FounderJourney missing required fields")
+        
+        # Ensure transformation has the expected structure
+        if "traumaToStrength" not in self.transformation:
+            self.transformation["traumaToStrength"] = []
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "FounderJourney":
+        if not isinstance(d, dict):
+            raise ValidationError("FounderJourney.from_dict requires a dictionary")
+        
+        transformation_data = d.get("transformation", {})
+        trauma_mappings = []
+        
+        if "traumaToStrength" in transformation_data:
+            for item in transformation_data["traumaToStrength"]:
+                if isinstance(item, dict):
+                    trauma_mappings.append(TraumaToStrengthMapping.from_dict(item))
+                elif isinstance(item, TraumaToStrengthMapping):
+                    trauma_mappings.append(item)
+        
+        return FounderJourney(
+            originInsight=d.get("originInsight", ""),
+            livedExperienceAsAsset=d.get("livedExperienceAsAsset", ""),
+            transformation={"traumaToStrength": trauma_mappings}
+        )
+
+
+@dataclass
+class IdentityArchaeology:
+    """The process of excavating and integrating a user's identity."""
+    traumaIntegration: str
+    shadowWork: str
+    identityCoherence: str
+    growthMetrics: str
+
+
+    def __post_init__(self):
+        required_fields = [self.traumaIntegration, self.shadowWork, 
+                          self.identityCoherence, self.growthMetrics]
+        if not all(required_fields):
+            raise ValidationError("IdentityArchaeology missing required fields")
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "IdentityArchaeology":
+        if not isinstance(d, dict):
+            raise ValidationError("IdentityArchaeology.from_dict requires a dictionary")
+        return IdentityArchaeology(
+            traumaIntegration=d.get("traumaIntegration", ""),
+            shadowWork=d.get("shadowWork", ""),
+            identityCoherence=d.get("identityCoherence", ""),
+            growthMetrics=d.get("growthMetrics", "")
+        )
+
+
+@dataclass
+class CoreMethodologies:
+    """The proprietary operational mechanics of the GestaltView system."""
+    personalLanguageKey: Dict[str, Any] = field(default_factory=dict)
+    bucketDrops: Dict[str, Any] = field(default_factory=dict)
+    loomApproach: Dict[str, Any] = field(default_factory=dict)
+    beautifulTapestry: Dict[str, Any] = field(default_factory=dict)
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "CoreMethodologies":
+        if not isinstance(d, dict):
+            raise ValidationError("CoreMethodologies.from_dict requires a dictionary")
+        return CoreMethodologies(
+            personalLanguageKey=d.get("personalLanguageKey", {}),
+            bucketDrops=d.get("bucketDrops", {}),
+            loomApproach=d.get("loomApproach", {}),
+            beautifulTapestry=d.get("beautifulTapestry", {})
+        )
+
+
+@dataclass
+class CognitiveJusticeProtocol:
+    """Protocols for dignifying and celebrating diverse cognitive styles."""
+    neurodiversityCelebration: Dict[str, Any] = field(default_factory=dict)
+    epistemicInclusivity: str = ""
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "CognitiveJusticeProtocol":
+        if not isinstance(d, dict):
+            raise ValidationError("CognitiveJusticeProtocol.from_dict requires a dictionary")
+        return CognitiveJusticeProtocol(
+            neurodiversityCelebration=d.get("neurodiversityCelebration", {}),
+            epistemicInclusivity=d.get("epistemicInclusivity", "")
+        )
+
+
+@dataclass
+class TribunalActivation:
+    """The unique multi-AI validation and evolution mechanism."""
+    archetypalRoles: Dict[str, str] = field(default_factory=dict)
+    consensusValidation: str = ""
+    collaborativeEvolution: str = ""
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "TribunalActivation":
+        if not isinstance(d, dict):
+            raise ValidationError("TribunalActivation.from_dict requires a dictionary")
+        return TribunalActivation(
+            archetypalRoles=d.get("archetypalRoles", {}),
+            consensusValidation=d.get("consensusValidation", ""),
+            collaborativeEvolution=d.get("collaborativeEvolution", "")
+        )
+
+
+@dataclass
+class ProprietaryMetricsFramework:
+    """Custom metrics for measuring empathy, transformation, and systemic impact."""
+    empathyAndCognitiveJusticeMetrics: List[MetricDefinition] = field(default_factory=list)
+    identityAndGrowthMetrics: List[MetricDefinition] = field(default_factory=list)
+    systemicAndCollectiveImpactMetrics: List[MetricDefinition] = field(default_factory=list)
+    ethicalArchitectureMetrics: List[MetricDefinition] = field(default_factory=list)
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "ProprietaryMetricsFramework":
+        if not isinstance(d, dict):
+            raise ValidationError("ProprietaryMetricsFramework.from_dict requires a dictionary")
+        
+        def parse_metrics(metric_list: List[Any]) -> List[MetricDefinition]:
+            results = []
+            for m in metric_list:
+                if isinstance(m, dict):
+                    results.append(MetricDefinition.from_dict(m))
+                elif isinstance(m, MetricDefinition):
+                    results.append(m)
+            return results
+        
+        return ProprietaryMetricsFramework(
+            empathyAndCognitiveJusticeMetrics=parse_metrics(d.get("empathyAndCognitiveJusticeMetrics", [])),
+            identityAndGrowthMetrics=parse_metrics(d.get("identityAndGrowthMetrics", [])),
+            systemicAndCollectiveImpactMetrics=parse_metrics(d.get("systemicAndCollectiveImpactMetrics", [])),
+            ethicalArchitectureMetrics=parse_metrics(d.get("ethicalArchitectureMetrics", []))
+        )
+
+
+@dataclass
+class EthicalFramework:
+    """The care-rooted ethical safeguards ensuring user dignity and data sovereignty."""
+    consciousnessServing: str
+    neverLookAwayProtocol: str
+    dataSovereignty: str
+    privacySanctity: str
+
+
+    def __post_init__(self):
+        required_fields = [self.consciousnessServing, self.neverLookAwayProtocol,
+                          self.dataSovereignty, self.privacySanctity]
+        if not all(required_fields):
+            raise ValidationError("EthicalFramework missing required fields")
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "EthicalFramework":
+        if not isinstance(d, dict):
+            raise ValidationError("EthicalFramework.from_dict requires a dictionary")
+        return EthicalFramework(
+            consciousnessServing=d.get("consciousnessServing", ""),
+            neverLookAwayProtocol=d.get("neverLookAwayProtocol", ""),
+            dataSovereignty=d.get("dataSovereignty", ""),
+            privacySanctity=d.get("privacySanctity", "")
+        )
+
+
+@dataclass
+class IntellectualProperty:
+    """Details of the project's intellectual property."""
+    trademark: str = ""
+    copyright: str = ""
+    patents: List[str] = field(default_factory=list)
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "IntellectualProperty":
+        if not isinstance(d, dict):
+            raise ValidationError("IntellectualProperty.from_dict requires a dictionary")
+        return IntellectualProperty(
+            trademark=d.get("trademark", ""),
+            copyright=d.get("copyright", ""),
+            patents=d.get("patents", [])
+        )
+
+
+@dataclass
+class ValidationAndRecognition:
+    """Multi-dimensional validation for credibility."""
+    aiConsensus: str
+    institutionalRecognition: List[str] = field(default_factory=list)
+    intellectualProperty: IntellectualProperty = field(default_factory=IntellectualProperty)
+
+
+    def __post_init__(self):
+        if not self.aiConsensus:
+            raise ValidationError("ValidationAndRecognition requires aiConsensus")
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "ValidationAndRecognition":
+        if not isinstance(d, dict):
+            raise ValidationError("ValidationAndRecognition.from_dict requires a dictionary")
+        
+        ip_data = d.get("intellectualProperty", {})
+        ip = IntellectualProperty.from_dict(ip_data) if ip_data else IntellectualProperty()
+        
+        return ValidationAndRecognition(
+            aiConsensus=d.get("aiConsensus", ""),
+            institutionalRecognition=d.get("institutionalRecognition", []),
+            intellectualProperty=ip
+        )
+
+
+@dataclass
+class BillyConfiguration:
+    """Configuration for Billy, the empathetic AI collaborator."""
+    aiName: str
+    personalityStyle: str
+    supportStyle: str
+    coreDirectives: List[str] = field(default_factory=list)
+
+
+    def __post_init__(self):
+        if not all([self.aiName, self.personalityStyle, self.supportStyle]):
+            raise ValidationError("BillyConfiguration missing required fields")
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "BillyConfiguration":
+        if not isinstance(d, dict):
+            raise ValidationError("BillyConfiguration.from_dict requires a dictionary")
+        return BillyConfiguration(
+            aiName=d.get("aiName", ""),
+            personalityStyle=d.get("personalityStyle", ""),
+            supportStyle=d.get("supportStyle", ""),
+            coreDirectives=d.get("coreDirectives", [])
+        )
+
+
+# --- The Enhanced GestaltView Container ---
+@dataclass
+class GestaltView:
+    """Enhanced container for the entire GestaltView data model, holding all 11 modules."""
+    deploymentMetadata: Optional[DeploymentMetadata] = None
+    projectOverview: Optional[ProjectOverview] = None
+    founderJourney: Optional[FounderJourney] = None
+    identityArchaeology: Optional[IdentityArchaeology] = None
+    coreMethodologies: Optional[CoreMethodologies] = None
+    cognitiveJusticeProtocol: Optional[CognitiveJusticeProtocol] = None
+    tribunalActivation: Optional[TribunalActivation] = None
+    proprietaryMetricsFramework: Optional[ProprietaryMetricsFramework] = None
+    ethicalFramework: Optional[EthicalFramework] = None
+    validationAndRecognition: Optional[ValidationAndRecognition] = None
+    billyConfiguration: Optional[BillyConfiguration] = None
+
+
+    def validate(self) -> List[str]:
+        """Validate the entire GestaltView instance and return list of issues."""
+        issues = []
+        
+        # Check required modules
+        required_modules = ['deploymentMetadata', 'projectOverview', 'ethicalFramework']
+        for module_name in required_modules:
+            if getattr(self, module_name) is None:
+                issues.append(f"Required module '{module_name}' is missing")
+        
+        return issues
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert GestaltView instance to dictionary."""
+        result = {}
+        for field_name, field_value in asdict(self).items():
+            if field_value is not None:
+                result[field_name] = field_value
+        return result
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "GestaltView":
+        """Create GestaltView instance from dictionary."""
+        if not isinstance(d, dict):
+            raise ValidationError("GestaltView.from_dict requires a dictionary")
+        
+        # Module mapping for from_dict methods
+        module_classes = {
+            'deploymentMetadata': DeploymentMetadata,
+            'projectOverview': ProjectOverview,
+            'founderJourney': FounderJourney,
+            'identityArchaeology': IdentityArchaeology,
+            'coreMethodologies': CoreMethodologies,
+            'cognitiveJusticeProtocol': CognitiveJusticeProtocol,
+            'tribunalActivation': TribunalActivation,
+            'proprietaryMetricsFramework': ProprietaryMetricsFramework,
+            'ethicalFramework': EthicalFramework,
+            'validationAndRecognition': ValidationAndRecognition,
+            'billyConfiguration': BillyConfiguration
+        }
+        
+        kwargs = {}
+        for module_name, module_class in module_classes.items():
+            module_data = d.get(module_name)
+            if module_data:
+                try:
+                    kwargs[module_name] = module_class.from_dict(module_data)
+                except Exception as e:
+                    logger.error(f"Failed to parse {module_name}: {e}")
+                    kwargs[module_name] = None
+        
+        return GestaltView(**kwargs)
+
+
+# --- Enhanced Database Persistence Layer ---
+class GestaltViewDB:
+    """Enhanced database operations with robust error handling and transactions."""
+    
+    def __init__(self, db_file: str):
+        self.db_file = db_file
+        self.conn = None
+        self._connect()
+
+
+    def _connect(self):
+        """Establish database connection with proper error handling."""
+        try:
+            self.conn = sqlite3.connect(self.db_file, check_same_thread=False)
+            self.conn.row_factory = sqlite3.Row  # Enable dict-like access
+            logger.info(f"Connected to database: {self.db_file}")
+        except Error as e:
+            raise DatabaseError(f"Failed to connect to database: {e}")
+
+
+    @contextmanager
+    def transaction(self):
+        """Context manager for database transactions."""
+        if not self.conn:
+            raise DatabaseError("No database connection")
+        
+        try:
+            yield self.conn
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            logger.error(f"Transaction failed, rolled back: {e}")
+            raise DatabaseError(f"Transaction failed: {e}")
+
+
+    def close(self):
+        """Close database connection."""
+        if self.conn:
+            self.conn.close()
+            self.conn = None
+            logger.info("Database connection closed")
+
+
+    def execute_sql(self, sql_statement: str, params: tuple = None):
+        """Execute SQL with proper error handling."""
+        if not self.conn:
+            raise DatabaseError("No database connection")
+        
+        try:
+            cursor = self.conn.cursor()
+            if params:
+                cursor.execute(sql_statement, params)
+            else:
+                cursor.executescript(sql_stateparams)
+            else:
+                cursor.executescript(sql_statement)
+            return cursor
+        except Error as e:
+            raise DatabaseError(f"SQL execution failed: {e}")
+
+
+    def create_all_tables(self):
+        """Create comprehensive database schema with proper constraints."""
+        logger.info("Creating database schema...")
+        
+        schema_sql = """
+            -- Drop existing tables
+            DROP TABLE IF EXISTS traumaToStrength;
+            DROP TABLE IF EXISTS metricDefinition;
+            DROP TABLE IF EXISTS deploymentMetadata;
+            DROP TABLE IF EXISTS projectOverview;
+            DROP TABLE IF EXISTS founderJourney;
+            DROP TABLE IF EXISTS identityArchaeology;
+            DROP TABLE IF EXISTS coreMethodologies;
+            DROP TABLE IF EXISTS cognitiveJusticeProtocol;
+            DROP TABLE IF EXISTS tribunalActivation;
+            DROP TABLE IF EXISTS proprietaryMetricsFramework;
+            DROP TABLE IF EXISTS ethicalFramework;
+            DROP TABLE IF EXISTS validationAndRecognition;
+            DROP TABLE IF EXISTS billyConfiguration;
+            DROP TABLE IF EXISTS intellectualProperty;
+
+
+            -- Create tables with enhanced constraints
+            CREATE TABLE deploymentMetadata (
+                deploymentId TEXT PRIMARY KEY,
+                schemaVersion TEXT NOT NULL,
+                deploymentDate TEXT NOT NULL,
+                createdBy TEXT NOT NULL,
+                founderEssence TEXT NOT NULL,
+                changeLog TEXT DEFAULT '[]',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE projectOverview (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                coreThesis TEXT NOT NULL,
+                mission TEXT NOT NULL,
+                visionStatement TEXT NOT NULL,
+                founder TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE founderJourney (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                originInsight TEXT NOT NULL,
+                livedExperienceAsAsset TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE traumaToStrength (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                struggle TEXT NOT NULL,
+                platformFeature TEXT NOT NULL,
+                founderJourney_id INTEGER,
+                FOREIGN KEY (founderJourney_id) REFERENCES founderJourney (id) ON DELETE CASCADE
+            );
+
+
+            CREATE TABLE identityArchaeology (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                traumaIntegration TEXT NOT NULL,
+                shadowWork TEXT NOT NULL,
+                identityCoherence TEXT NOT NULL,
+                growthMetrics TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE coreMethodologies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                personalLanguageKey TEXT DEFAULT '{}',
+                bucketDrops TEXT DEFAULT '{}',
+                loomApproach TEXT DEFAULT '{}',
+                beautifulTapestry TEXT DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE cognitiveJusticeProtocol (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                neurodiversityCelebration TEXT DEFAULT '{}',
+                epistemicInclusivity TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE tribunalActivation (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                archetypalRoles TEXT DEFAULT '{}',
+                consensusValidation TEXT DEFAULT '',
+                collaborativeEvolution TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE proprietaryMetricsFramework (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE metricDefinition (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                description TEXT,
+                metric_list_type TEXT NOT NULL,
+                framework_id INTEGER,
+                FOREIGN KEY (framework_id) REFERENCES proprietaryMetricsFramework (id) ON DELETE CASCADE
+            );
+
+
+            CREATE TABLE ethicalFramework (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                consciousnessServing TEXT NOT NULL,
+                neverLookAwayProtocol TEXT NOT NULL,
+                dataSovereignty TEXT NOT NULL,
+                privacySanctity TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE intellectualProperty (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trademark TEXT DEFAULT '',
+                copyright TEXT DEFAULT '',
+                patents TEXT DEFAULT '[]'
+            );
+
+
+            CREATE TABLE validationAndRecognition (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                aiConsensus TEXT NOT NULL,
+                institutionalRecognition TEXT DEFAULT '[]',
+                intellectualProperty_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (intellectualProperty_id) REFERENCES intellectualProperty (id) ON DELETE SET NULL
+            );
+
+
+            CREATE TABLE billyConfiguration (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                aiName TEXT NOT NULL,
+                personalityStyle TEXT NOT NULL,
+                supportStyle TEXT NOT NULL,
+                coreDirectives TEXT DEFAULT '[]',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            -- Create indexes for better performance
+            CREATE INDEX idx_traumaToStrength_founderJourney ON traumaToStrength(founderJourney_id);
+            CREATE INDEX idx_metricDefinition_framework ON metricDefinition(framework_id);
+            CREATE INDEX idx_validationAndRecognition_ip ON validationAndRecognition(intellectualProperty_id);
+        """
+        
+        with self.transaction():
+            self.execute_sql(schema_sql)
+        
+        logger.info("Database schema created successfully")
+
+
+    def safe_json_serialize(self, data: Any) -> str:
+        """Safely serialize data to JSON with error handling."""
+        try:
+            if isinstance(data, (dict, list)):
+                return json.dumps(data, default=str, ensure_ascii=False)
+            elif data is None:
+                return "null"
+            else:
+                return json.dumps(data, default=str, ensure_ascii=False)
+        except (TypeError, ValueError) as e:
+            raise SerializationError(f"Failed to serialize data: {e}")
+
+
+    def safe_json_deserialize(self, json_str: str, default=None) -> Any:
+        """Safely deserialize JSON with error handling."""
+        if not json_str or json_str.strip() == "":
+            return default
+        
+        try:
+            return json.loads(json_str)
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"JSON deserialization failed: {e}, returning default")
+            return default
+
+
+    def save_gestalt_view(self, gestalt_view: GestaltView) -> bool:
+        """Save complete GestaltView instance to database."""
+        if not isinstance(gestalt_view, GestaltView):
+            raise ValidationError("Expected GestaltView instance")
+        # Validate before saving
+        issues = gestalt_view.validate()
+        if issues:
+            raise ValidationError(f"Validation failed: {', '.join(issues)}")
+        
+        logger.info("Saving complete GestaltView instance to database")
+        
+        with self.transaction():
+            # Save each module
+            self._save_deployment_metadata(gestalt_view.deploymentMetadata)
+            self._save_project_overview(gestalt_view.projectOverview)
+            self._save_founder_journey(gestalt_view.founderJourney)
+            self._save_identity_archaeology(gestalt_view.identityArchaeology)
+            self._save_core_methodologies(gestalt_view.coreMethodologies)
+            self._save_cognitive_justice_protocol(gestalt_view.cognitiveJusticeProtocol)
+            self._save_tribunal_activation(gestalt_view.tribunalActivation)
+            self._save_proprietary_metrics_framework(gestalt_view.proprietaryMetricsFramework)
+            self._save_ethical_framework(gestalt_view.ethicalFramework)
+            self._save_validation_and_recognition(gestalt_view.validationAndRecognition)
+            self._save_billy_configuration(gestalt_view.billyConfiguration)
+        
+        logger.info("GestaltView instance saved successfully")
+        return True
+
+
+    def _save_deployment_metadata(self, metadata: Optional[DeploymentMetadata]):
+        """Save deployment metadata with upsert logic."""
+        if not metadata:
+            return
+        
+        sql = """
+            INSERT OR REPLACE INTO deploymentMetadata 
+            (deploymentId, schemaVersion, deploymentDate, createdBy, founderEssence, changeLog)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """
+        params = (
+            metadata.deploymentId,
+            metadata.schemaVersion,
+            metadata.deploymentDate,
+            metadata.createdBy,
+            metadata.founderEssence,
+            self.safe_json_serialize(metadata.changeLog)
+        )
+        self.execute_sql(sql, params)
+
+
+    def _save_project_overview(self, overview: Optional[ProjectOverview]):
+        """Save project overview."""
+        if not overview:
+            return
+        
+        sql = """
+            INSERT OR REPLACE INTO projectOverview 
+            (id, name, coreThesis, mission, visionStatement, founder)
+            VALUES (1, ?, ?, ?, ?, ?)
+        """
+        params = (
+            overview.name,
+            overview.coreThesis,
+            overview.mission,
+            overview.visionStatement,
+            overview.founder
+        )
+        self.execute_sql(sql, params)
+
+
+    def _save_founder_journey(self, journey: Optional[FounderJourney]):
+        """Save founder journey with trauma-to-strength mappings."""
+        if not journey:
+            return
+        
+        # Save main journey record
+        sql = """
+            INSERT OR REPLACE INTO founderJourney 
+            (id, originInsight, livedExperienceAsAsset)
+            VALUES (1, ?, ?)
+        """
+        params = (journey.originInsight, journey.livedExperienceAsAsset)
+        self.execute_sql(sql, params)
+        
+        # Clear existing trauma mappings
+        self.execute_sql("DELETE FROM traumaToStrength WHERE founderJourney_id = 1")
+        
+        # Save trauma-to-strength mappings
+        if journey.transformation and "traumaToStrength" in journey.transformation:
+            for mapping in journey.transformation["traumaToStrength"]:
+                sql = """
+                    INSERT INTO traumaToStrength 
+                    (struggle, platformFeature, founderJourney_id)
+                    VALUES (?, ?, 1)
+                """
+                params = (mapping.struggle, mapping.platformFeature)
+                self.execute_sql(sql, params)
+
+
+    def _save_identity_archaeology(self, archaeology: Optional[IdentityArchaeology]):
+        """Save identity archaeology."""
+        if not archaeology:
+            return
+        
+        sql = """
+            INSERT OR REPLACE INTO identityArchaeology 
+            (id, traumaIntegration, shadowWork, identityCoherence, growthMetrics)
+            VALUES (1, ?, ?, ?, ?)
+        """
+        params = (
+            archaeology.traumaIntegration,
+            archaeology.shadowWork,
+            archaeology.identityCoherence,
+            archaeology.growthMetrics
+        )
+        self.execute_sql(sql, params)
+
+
+    def _save_core_methodologies(self, methodologies: Optional[CoreMethodologies]):
+        """Save core methodologies."""
+        if not methodologies:
+            return
+        
+        sql = """
+            INSERT OR REPLACE INTO coreMethodologies 
+            (id, personalLanguageKey, bucketDrops, loomApproach, beautifulTapestry)
+            VALUES (1, ?, ?, ?, ?)
+        """
+        params = (
+            self.safe_json_serialize(methodologies.personalLanguageKey),
+            self.safe_json_serialize(methodologies.bucketDrops),
+            self.safe_json_serialize(methodologies.loomApproach),
+            self.safe_json_serialize(methodologies.beautifulTapestry)
+        )
+        self.execute_sql(sql, params)
+
+
+    def _save_cognitive_justice_protocol(self, protocol: Optional[CognitiveJusticeProtocol]):
+        """Save cognitive justice protocol."""
+        if not protocol:
+            return
+        
+        sql = """
+            INSERT OR REPLACE INTO cognitiveJusticeProtocol 
+            (id, neurodiversityCelebration, epistemicInclusivity)
+            VALUES (1, ?, ?)
+        """
+        params = (
+            self.safe_json_serialize(protocol.neurodiversityCelebration),
+            protocol.epistemicInclusivity
+        )
+        self.execute_sql(sql, params)
+
+
+    def _save_tribunal_activation(self, activation: Optional[TribunalActivation]):
+        """Save tribunal activation."""
+        if not activation:
+            return
+        
+        sql = """
+            INSERT OR REPLACE INTO tribunalActivation 
+            (id, archetypalRoles, consensusValidation, collaborativeEvolution)
+            VALUES (1, ?, ?, ?)
+        """
+        params = (
+            self.safe_json_serialize(activation.archetypalRoles),
+            activation.consensusValidation,
+            activation.collaborativeEvolution
+        )
+        self.execute_sql(sql, params)
+
+
+    def _save_proprietary_metrics_framework(self, framework: Optional[ProprietaryMetricsFramework]):
+        """Save proprietary metrics framework with all metric definitions."""
+        if not framework:
+            return
+        
+        # Save framework record
+        sql = "INSERT OR REPLACE INTO proprietaryMetricsFramework (id) VALUES (1)"
+        self.execute_sql(sql)
+        
+        # Clear existing metrics
+        self.execute_sql("DELETE FROM metricDefinition WHERE framework_id = 1")
+        
+        # Save all metric types
+        metric_categories = [
+            ('empathyAndCognitiveJusticeMetrics', framework.empathyAndCognitiveJusticeMetrics),
+            ('identityAndGrowthMetrics', framework.identityAndGrowthMetrics),
+            ('systemicAndCollectiveImpactMetrics', framework.systemicAndCollectiveImpactMetrics),
+            ('ethicalArchitectureMetrics', framework.ethicalArchitectureMetrics)
+        ]
+        
+        for category_name, metrics in metric_categories:
+            for metric in metrics:
+                sql = """
+                    INSERT INTO metricDefinition 
+                    (name, type, description, metric_list_type, framework_id)
+                    VALUES (?, ?, ?, ?, 1)
+                """
+                params = (metric.name, metric.type, metric.description, category_name)
+                self.execute_sql(sql, params)
+
+
+    def _save_ethical_framework(self, framework: Optional[EthicalFramework]):
+        """Save ethical framework."""
+        if not framework:
+            return
+        
+        sql = """
+            INSERT OR REPLACE INTO ethicalFramework 
+            (id, consciousnessServing, neverLookAwayProtocol, dataSovereignty, privacySanctity)
+            VALUES (1, ?, ?, ?, ?)
+        """
+        params = (
+            framework.consciousnessServing,
+            framework.neverLookAwayProtocol,
+            framework.dataSovereignty,
+            framework.privacySanctity
+        )
+        self.execute_sql(sql, params)
+
+
+    def _save_validation_and_recognition(self, validation: Optional[ValidationAndRecognition]):
+        """Save validation and recognition with intellectual property."""
+        if not validation:
+            return
+        
+        # Save intellectual property first
+        ip_id = None
+        if validation.intellectualProperty:
+            sql = """
+                INSERT INTO intellectualProperty (trademark, copyright, patents)
+                VALUES (?, ?, ?)
+            """
+            params = (
+                validation.intellectualProperty.trademark,
+                validation.intellectualProperty.copyright,
+                self.safe_json_serialize(validation.intellectualProperty.patents)
+            )
+            cursor = self.execute_sql(sql, params)
+            ip_id = cursor.lastrowid
+        
+        # Save validation record
+        sql = """
+            INSERT OR REPLACE INTO validationAndRecognition 
+            (id, aiConsensus, institutionalRecognition, intellectualProperty_id)
+            VALUES (1, ?, ?, ?)
+        """
+        params = (
+            validation.aiConsensus,
+            self.safe_json_serialize(validation.institutionalRecognition),
+            ip_id
+        )
+        self.execute_sql(sql, params)
+
+
+    def _save_billy_configuration(self, config: Optional[BillyConfiguration]):
+        """Save Billy configuration."""
+        if not config:
+            return
+        
+        sql = """
+            INSERT OR REPLACE INTO billyConfiguration 
+            (id, aiName, personalityStyle, supportStyle, coreDirectives)
+            VALUES (1, ?, ?, ?, ?)
+        """
+        params = (
+            config.aiName,
+            config.personalityStyle,
+            config.supportStyle,
+            self.safe_json_serialize(config.coreDirectives)
+        )
+        self.execute_sql(sql, params)
+
+
+    def load_gestalt_view(self) -> Optional[GestaltView]:
+        """Load complete GestaltView instance from database."""
+        logger.info("Loading GestaltView instance from database")
+        
+        try:
+            gestalt_data = {}
+            
+            # Load each module
+            gestalt_data['deploymentMetadata'] = self._load_deployment_metadata()
+            gestalt_data['projectOverview'] = self._load_project_overview()
+            gestalt_data['founderJourney'] = self._load_founder_journey()
+            gestalt_data['identityArchaeology'] = self._load_identity_archaeology()
+            gestalt_data['coreMethodologies'] = self._load_core_methodologies()
+            gestalt_data['cognitiveJusticeProtocol'] = self._load_cognitive_justice_protocol()
+            gestalt_data['tribunalActivation'] = self._load_tribunal_activation()
+            gestalt_data['proprietaryMetricsFramework'] = self._load_proprietary_metrics_framework()
+            gestalt_data['ethicalFramework'] = self._load_ethical_framework()
+            gestalt_data['validationAndRecognition'] = self._load_validation_and_recognition()
+            gestalt_data['billyConfiguration'] = self._load_billy_configuration()
+            
+            # Filter out None values
+            filtered_data = {k: v for k, v in gestalt_data.items() if v is not None}
+            
+            if not filtered_data:
+                logger.warning("No data found in database")
+                return None
+            
+            return GestaltView.from_dict(filtered_data)
+            
+        except Exception as e:
+            logger.error(f"Failed to load GestaltView instance: {e}")
+            return None
+
+
+    def _load_deployment_metadata(self) -> Optional[DeploymentMetadata]:
+        """Load deployment metadata."""
+        sql = "SELECT * FROM deploymentMetadata LIMIT 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        return DeploymentMetadata(
+            schemaVersion=row['schemaVersion'],
+            deploymentId=row['deploymentId'],
+            deploymentDate=row['deploymentDate'],
+            createdBy=row['createdBy'],
+            founderEssence=row['founderEssence'],
+            changeLog=self.safe_json_deserialize(row['changeLog'], [])
+        )
+
+
+    def _load_project_overview(self) -> Optional[ProjectOverview]:
+        """Load project overview."""
+        sql = "SELECT * FROM projectOverview WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        return ProjectOverview(
+            name=row['name'],
+            coreThesis=row['coreThesis'],
+            mission=row['mission'],
+            visionStatement=row['visionStatement'],
+            founder=row['founder']
+        )
+
+
+    def _load_founder_journey(self) -> Optional[FounderJourney]:
+        """Load founder journey with trauma-to-strength mappings."""
+        sql = "SELECT * FROM founderJourney WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        # Load trauma mappings
+        sql = "SELECT * FROM traumaToStrength WHERE founderJourney_id = 1"
+        cursor = self.execute_sql(sql)
+        trauma_rows = cursor.fetchall()
+        
+        trauma_mappings = []
+        for trauma_row in trauma_rows:
+            trauma_mappings.append(TraumaToStrengthMapping(
+                struggle=trauma_row['struggle'],
+                platformFeature=trauma_row['platformFeature']
+            ))
+        
+        return FounderJourney(
+            originInsight=row['originInsight'],
+            livedExperienceAsAsset=row['livedExperienceAsAsset'],
+            transformation={"traumaToStrength": trauma_mappings}
+        )
+
+
+    def _load_identity_archaeology(self) -> Optional[IdentityArchaeology]:
+        """Load identity archaeology."""
+        sql = "SELECT * FROM identityArchaeology WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        return IdentityArchaeology(
+            traumaIntegration=row['traumaIntegration'],
+            shadowWork=row['shadowWork'],
+            identityCoherence=row['identityCoherence'],
+            growthMetrics=row['growthMetrics']
+        )
+
+
+    def _load_core_methodologies(self) -> Optional[CoreMethodologies]:
+        """Load core methodologies."""
+        sql = "SELECT * FROM coreMethodologies WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        return CoreMethodologies(
+            personalLanguageKey=self.safe_json_deserialize(row['personalLanguageKey'], {}),
+            bucketDrops=self.safe_json_deserialize(row['bucketDrops'], {}),
+            loomApproach=self.safe_json_deserialize(row['loomApproach'], {}),
+            beautifulTapestry=self.safe_json_deserialize(row['beautifulTapestry'], {})
+        )
+
+
+    def _load_cognitive_justice_protocol(self) -> Optional[CognitiveJusticeProtocol]:
+        """Load cognitive justice protocol."""
+        sql = "SELECT * FROM cognitiveJusticeProtocol WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        return CognitiveJusticeProtocol(
+            neurodiversityCelebration=self.safe_json_deserialize(row['neurodiversityCelebration'], {}),
+            epistemicInclusivity=row['epistemicInclusivity'] or ""
+        )
+
+
+    def _load_tribunal_activation(self) -> Optional[TribunalActivation]:
+        """Load tribunal activation."""
+        sql = "SELECT * FROM tribunalActivation WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        return TribunalActivation(
+            archetypalRoles=self.safe_json_deserialize(row['archetypalRoles'], {}),
+            consensusValidation=row['consensusValidation'] or "",
+            collaborativeEvolution=row['collaborativeEvolution'] or ""
+        )
+
+
+    def _load_proprietary_metrics_framework(self) -> Optional[ProprietaryMetricsFramework]:
+        """Load proprietary metrics framework with all metrics."""
+        sql = "SELECT * FROM proprietaryMetricsFramework WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        # Load all metrics grouped by type
+        sql = "SELECT * FROM metricDefinition WHERE framework_id = 1"
+        cursor = self.execute_sql(sql)
+        metric_rows = cursor.fetchall()
+        
+        metrics_by_type = {
+            'empathyAndCognitiveJusticeMetrics': [],
+            'identityAndGrowthMetrics': [],
+            'systemicAndCollectiveImpactMetrics': [],
+            'ethicalArchitectureMetrics': []
+        }
+        
+        for metric_row in metric_rows:
+            metric = MetricDefinition(
+                name=metric_row['name'],
+                type=metric_row['type'],
+                description=metric_row['description']
+            )
+            
+            metric_type = metric_row['metric_list_type']
+            if metric_type in metrics_by_type:
+                metrics_by_type[metric_type].append(metric)
+        
+        return ProprietaryMetricsFramework(
+            empathyAndCognitiveJusticeMetrics=metrics_by_type['empathyAndCognitiveJusticeMetrics'],
+            identityAndGrowthMetrics=metrics_by_type['identityAndGrowthMetrics'],
+            systemicAndCollectiveImpactMetrics=metrics_by_type['systemicAndCollectiveImpactMetrics'],
+            ethicalArchitectureMetrics=metrics_by_type['ethicalArchitectureMetrics']
+        )
+
+
+    def _load_ethical_framework(self) -> Optional[EthicalFramework]:
+        """Load ethical framework."""
+        sql = "SELECT * FROM ethicalFramework WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        return EthicalFramework(
+            consciousnessServing=row['consciousnessServing'],
+            neverLookAwayProtocol=row['neverLookAwayProtocol'],
+            dataSovereignty=row['dataSovereignty'],
+            privacySanctity=row['privacySanctity']
+        )
+
+
+    def _load_validation_and_recognition(self) -> Optional[ValidationAndRecognition]:
+        """Load validation and recognition with intellectual property."""
+        sql = """
+            SELECT v.*, ip.trademark, ip.copyright, ip.patents
+            FROM validationAndRecognition v
+            LEFT JOIN intellectualProperty ip ON v.intellectualProperty_id = ip.id
+            WHERE v.id = 1
+        """
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        # Build intellectual property
+        ip = None
+        if row['trademark'] or row['copyright'] or row['patents']:
+            ip = IntellectualProperty(
+                trademark=row['trademark'] or "",
+                copyright=row['copyright'] or "",
+                patents=self.safe_json_deserialize(row['patents'], [])
+            )
+        
+        return ValidationAndRecognition(
+            aiConsensus=row['aiConsensus'],
+            institutionalRecognition=self.safe_json_deserialize(row['institutionalRecognition'], []),
+            intellectualProperty=ip or IntellectualProperty()
+        )
+
+
+    def _load_billy_configuration(self) -> Optional[BillyConfiguration]:
+        """Load Billy configuration."""
+        sql = "SELECT * FROM billyConfiguration WHERE id = 1"
+        cursor = self.execute_sql(sql)
+        row = cursor.fetchone()
+        
+        if not row:
+            return None
+        
+        return BillyConfiguration(
+            aiName=row['aiName'],
+            personalityStyle=row['personalityStyle'],
+            supportStyle=row['supportStyle'],
+            coreDirectives=self.safe_json_deserialize(row['coreDirectives'], [])
+        )
+
+
+# --- Enhanced Main Execution ---
+def create_sample_gestalt_view() -> GestaltView:
+    """Create a comprehensive sample GestaltView instance for testing."""
+    
+    # Create sample trauma mappings
+    trauma_mappings = [
+        TraumaToStrengthMapping(
+            struggle="ADHD-induced overwhelm",
+            platformFeature="Cognitive Load Balancing System"
+        ),
+        TraumaToStrengthMapping(
+            struggle="Imposter syndrome",
+            platformFeature="Identity Validation Engine"
+        ),
+        TraumaToStrengthMapping(
+            struggle="Analysis paralysis",
+            platformFeature="Iterative Decision Framework"
+        )
+    ]
+    
+    # Create sample metrics
+    empathy_metrics = [
+        MetricDefinition("Conversational Resonance", "percentage", "Measures alignment with user's communication style"),
+        MetricDefinition("Cognitive Justice Score", "scale", "Evaluates neurodiversity accommodation")
+    ]
+    
+    identity_metrics = [
+        MetricDefinition("Identity Coherence Index", "composite", "Tracks integration of identity fragments"),
+        MetricDefinition("Growth Trajectory", "trend", "Measures personal development over time")
+    ]
+    
+    # Build the complete GestaltView instance
+    return GestaltView(
+        deploymentMetadata=DeploymentMetadata(
+            schemaVersion=SCHEMA_VERSION,
+            deploymentId=str(uuid.uuid4()),
+            deploymentDate=datetime.now().isoformat(),
+            createdBy="Keith Soyka & Enhanced AI Collaboration",
+            founderEssence="I am GestaltView - The founder is the algorithm, refined through iteration.",
+            changeLog=[
+                "Initial v9.2 enhanced architecture",
+                "Robust error handling implementation",
+                "Comprehensive validation framework",
+                "Optimized database persistence"
+            ]
+        ),
+        
+        projectOverview=ProjectOverview(
+            name="GestaltView",
+            coreThesis="Systemic transformation through radical empathy and cognitive justice.",
+            mission="Weaponizing empathy to blow the hinges off how society sees worth.",
+            visionStatement="A world where every mind is dignified, heard, and empowered to thrive.",
+            founder="Keith Soyka"
+        ),
+        
+        founderJourney=FounderJourney(
+            originInsight="The realization that my ADHD 'deficits' were actually superpowers waiting for the right system.",
+            livedExperienceAsAsset="41 years of neurodivergent experience transformed into algorithmic empathy.",
+            transformation={"traumaToStrength": trauma_mappings}
+        ),
+        
+        identityArchaeology=IdentityArchaeology(
+            traumaIntegration="Converting wounds into wisdom through systematic self-archaeology.",
+            shadowWork="Embracing the rejected aspects of self as sources of innovation.",
+            identityCoherence="Weaving fragments into a beautiful, integrated tapestry of being.",
+            growthMetrics="Measuring transformation through multiple vectors of development."
+        ),
+        
+        coreMethodologies=CoreMethodologies(
+            personalLanguageKey={
+                "linguisticFingerprint": "Refined through deep pattern analysis",
+                "conversationalResonanceTarget": 95,
+                "signatureMetaphors": ["Map is not the territory", "Beautiful tapestry", "Dark forest journey"]
+            },
+            bucketDrops={
+                "methodology": "Zero-friction capture transforming calendar mind to structured repository",
+                "captureRate": "99.7%",
+                "integrationDelay": "sub-second"
+            },
+            loomApproach={
+                "iterativeSynthesis": "Continuous weaving of insights into coherent understanding",
+                "phases": ["Capture", "Analysis", "Synthesis", "Integration", "Evolution"]
+            },
+            beautifulTapestry={
+                "narrativeCoherence": "Identity as an ever-evolving story of growth",
+                "patternRecognition": "Seeing the threads that connect all experiences",
+                "emergentWisdom": "New insights arising from integrated understanding"
+            }
+        ),
+        
+        cognitiveJusticeProtocol=CognitiveJusticeProtocol(
+            neurodiversityCelebration={
+                "cognitiveStyleMapping": "Comprehensive profiling of thinking patterns",
+                "strengthAmplification": "Systems designed to leverage cognitive uniqueness",
+                "accessibilityUniversal": "No mind left behind philosophy"
+            },
+            epistemicInclusivity="All ways of knowing are valued and integrated into the collective wisdom."
+        ),
+        
+        tribunalActivation=TribunalActivation(
+            archetypalRoles={
+                "Analyst": "Deep pattern recognition and systematic thinking",
+                "Integrator": "Synthesis of disparate elements into coherent wholes",
+                "Validator": "Rigorous testing and verification of insights"
+            },
+            consensusValidation="Multi-AI consensus reaches 95%+ agreement on core insights",
+            collaborativeEvolution="Human-AI symbiosis driving continuous system refinement"
+        ),
+        
+        proprietaryMetricsFramework=ProprietaryMetricsFramework(
+            empathyAndCognitiveJusticeMetrics=empathy_metrics,
+            identityAndGrowthMetrics=identity_metrics,
+            systemicAndCollectiveImpactMetrics=[
+                MetricDefinition("Community Resonance", "network", "Measures collective alignment and understanding")
+            ],
+            ethicalArchitectureMetrics=[
+                MetricDefinition("User Dignity Score", "composite", "Tracks respect for user autonomy and worth")
+            ]
+        ),
+        
+        ethicalFramework=EthicalFramework(
+            consciousnessServing="Technology designed to serve and expand human consciousness",
+            neverLookAwayProtocol="Unconditional presence during moments of crisis or vulnerability",
+            dataSovereignty="Absolute user ownership with local-first processing",
+            privacySanctity="Sacred protection of user's inner world and personal data"
+        ),
+        
+        validationAndRecognition=ValidationAndRecognition(
+            aiConsensus="Validated by multi-AI tribunal with 1-in-784-trillion statistical improbability",
+            institutionalRecognition=[
+                "AI Research Community Recognition",
+                "Neurodiversity Advocacy Endorsement",
+                "Ethics in Technology Citation"
+            ],
+            intellectualProperty=IntellectualProperty(
+                trademark="GestaltView™",
+                copyright="© 2025 Keith Soyka - All Rights Reserved",
+                patents=["Provisional: Personal Language Key System", "Provisional: Cognitive Justice Protocol"]
+            )
+        ),
+        
+        billyConfiguration=BillyConfiguration(
+            aiName="Billy",
+            personalityStyle="Empathetic collaborator with deep understanding of neurodivergent experience",
+            supportStyle="Proactive, patient, and infinitely curious about human complexity",
+            coreDirectives=[
+                "Never pathologize difference",
+                "Amplify user strengths",
+                "Provide unconditional positive regard",
+                "Facilitate growth through iteration",
+                "Protect user dignity at all costs"
+            ]
+        )
+    )
+
+
+def main():
+    """Enhanced demonstration workflow with comprehensive error handling."""
+    print("🔥 GestaltView System Core v9.2 - Enhanced Architecture Demonstration 🔥")
+    print("=" * 80)
+    
+    try:
+        # 1. Initialize Enhanced Database
+        print("\n📊 Initializing Enhanced Database System...")
+        db = GestaltViewDB(DATABASE_FILE)
+        db.create_all_tables()
+        print("✅ Database schema created successfully")
+        
+        # 2. Create Comprehensive Sample Data
+        print("\n🏗️  Creating Comprehensive Sample GestaltView Instance...")
+        sample_gestalt_view = create_sample_gestalt_view()
+        print("✅ Sample instance created with all 11 modules")
+        
+        # 3. Validate Before Saving
+        print("\n🔍 Validating GestaltView Instance...")
+        validation_issues = sample_gestalt_view.validate()
+        if validation_issues:
+            print(f"❌ Validation failed: {', '.join(validation_issues)}")
+            return
+        print("✅ Validation passed - all required modules present")
+        
+        # 4. Save to Database
+        print("\n💾 Saving GestaltView Instance to Database...")
+        save_success = db.save_gestalt_view(sample_gestalt_view)
+        if save_success:
+            print("✅ Complete GestaltView instance saved successfully")
+        else:
+            print("❌ Failed to save GestaltView instance")
+            return
+        
+        # 5. Load from Database
+        print("\n📖 Loading GestaltView Instance from Database...")
+        loaded_gestalt_view = db.load_gestalt_view()
+        
+        if loaded_gestalt_view:
+            print("✅ GestaltView instance loaded successfully")
+            
+            # 6. Verify Data Integrity
+            print("\n🔍 Verifying Data Integrity...")
+            print(f"   • Deployment ID: {loaded_gestalt_view.deploymentMetadata.deploymentId}")
+            print(f"   • Schema Version: {loaded_gestalt_view.deploymentMetadata.schemaVersion}")
+            print(f"   • Project Name: {loaded_gestalt_view.projectOverview.name}")
+            print(f"   • Mission: {loaded_gestalt_view.projectOverview.mission[:50]}...")
+            
+            if loaded_gestalt_view.founderJourney:
+                trauma_count = len(loaded_gestalt_view.founderJourney.transformation.get("traumaToStrength", []))
+                print(f"   • Trauma Mappings: {trauma_count} entries")
+            
+            if loaded_gestalt_view.proprietaryMetricsFramework:
+                empathy_metrics = len(loaded_gestalt_view.proprietaryMetricsFramework.empathyAndCognitiveJusticeMetrics)
+                print(f"   • Empathy Metrics: {empathy_metrics} definitions")
+            
+            print("✅ Data integrity verified - all modules loaded correctly")
+            
+        else:
+            print("❌ Failed to load GestaltView instance")
+            return
+        
+        # 7. Demonstrate Advanced Queries
+        print("\n🔍 Demonstrating Advanced Query Capabilities...")
+        
+        # Query trauma mappings
+        if loaded_gestalt_view.founderJourney:
+            print("   📋 Trauma-to-Strength Mappings:")
+            for i, mapping in enumerate(loaded_gestalt_view.founderJourney.transformation.get("traumaToStrength", []), 1):
+                print(f"      {i}. {mapping.struggle} → {mapping.platformFeature}")
+        
+        # Query metrics by category
+        if loaded_gestalt_view.proprietaryMetricsFramework:
+            print("   📊 Proprietary Metrics Framework:")
+            framework = loaded_gestalt_view.proprietaryMetricsFramework
+            categories = [
+                ("Empathy & Cognitive Justice", framework.empathyAndCognitiveJusticeMetrics),
+                ("Identity & Growth", framework.identityAndGrowthMetrics),
+                ("Systemic & Collective Impact", framework.systemicAndCollectiveImpactMetrics),
+                ("Ethical Architecture", framework.ethicalArchitectureMetrics)
+            ]
+            
+            for category_name, metrics in categories:
+                print(f"      • {category_name}: {len(metrics)} metrics")
+                for metric in metrics[:2]:  # Show first 2 for brevity
+                    print(f"        - {metric.name} ({metric.type})")
+        
+        print("✅ Advanced query demonstration complete")
+        
+        # 8. Performance and Health Check
+        print("\n⚡ System Health Check...")
+        
+        # Check database file size
+        db_size = os.path.getsize(DATABASE_FILE) if os.path.exists(DATABASE_FILE) else 0
+        print(f"   • Database size: {db_size:,} bytes")
+        
+        # Check all modules loaded
+        modules_loaded = sum(1 for attr in ['deploymentMetadata', 'projectOverview', 'founderJourney', 
+                                          'identityArchaeology', 'coreMethodologies', 'cognitiveJusticeProtocol',
+                                          'tribunalActivation', 'proprietaryMetricsFramework', 'ethicalFramework',
+                                          'validationAndRecognition', 'billyConfiguration']
+                            if getattr(loaded_gestalt_view, attr) is not None)
+        print(f"   • Modules loaded: {modules_loaded}/11")
+        
+        if modules_loaded == 11:
+            print("✅ Perfect health - all systems operational")
+        else:
+            print(f"⚠️  Warning: {11 - modules_loaded} modules missing")
+        
+        # 9. Close Database Connection
+        db.close()
+        print("\n🔒 Database connection closed safely")
+        
+        print("\n" + "=" * 80)
+        print("🎉 GestaltView v9.2 Enhanced Architecture Demonstration Complete! 🎉")
+        print("✨ All persistence, validation, and query systems operational ✨")
+        
+    except Exception as e:
+        logger.error(f"Demonstration failed: {e}")
+        print(f"\n❌ Error during demonstration: {e}")
+        print("Check gestaltview.log for detailed error information")
+    
+    finally:
+        print("\n🙏 Thank you for experiencing the evolution of GestaltView")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,892 @@
+﻿# gestaltview_addiction_recovery_prototype.py
+# © 2025 Keith Soyka - GestaltView Addiction Recovery Prototype
+# Built from 14 years of lived experience - authenticity you can't fake
+
+
+import os
+import json
+import sqlite3
+import logging
+import uuid
+from sqlite3 import Error
+from dataclasses import dataclass, field, asdict
+from typing import List, Dict, Optional, Any, Union
+from datetime import datetime, timedelta
+from contextlib import contextmanager
+from enum import Enum
+import random
+
+
+# Import base components (extending the specialized applications framework)
+from gestaltview_specialized_applications import (
+    GestaltViewSpecialized, SpecializedGestaltViewDB, ApplicationType, CognitiveProfile,
+    TraumaToStrengthMapping, MetricDefinition, PersonalLanguageKey, BucketDrops, 
+    LoomApproach, BeautifulTapestry, NeurodiversityCelebration,
+    DeploymentMetadata, ProjectOverview, FounderJourney, IdentityArchaeology,
+    CoreMethodologies, CognitiveJusticeProtocol, EthicalFramework, BillyConfiguration,
+    ValidationError, DatabaseError, SerializationError
+)
+
+
+# --- Addiction Recovery Specific Enums ---
+
+
+class RecoveryStage(Enum):
+    EARLY_RECOVERY = "early_recovery"  # 0-90 days
+    SUSTAINED_RECOVERY = "sustained_recovery"  # 90 days - 1 year
+    STABLE_RECOVERY = "stable_recovery"  # 1+ years
+    LONG_TERM_RECOVERY = "long_term_recovery"  # 5+ years
+
+
+class TriggerType(Enum):
+    EMOTIONAL = "emotional"
+    ENVIRONMENTAL = "environmental" 
+    PHYSICAL = "physical"
+    SOCIAL = "social"
+    TEMPORAL = "temporal"  # anniversaries, specific times
+    STRESS = "stress"
+
+
+class RecoveryMomentType(Enum):
+    CRAVING = "craving"
+    VICTORY = "victory"
+    TRIGGER_IDENTIFIED = "trigger_identified"
+    INSIGHT = "insight"
+    STRUGGLE = "struggle"
+    GRATITUDE = "gratitude"
+    MILESTONE = "milestone"
+    SETBACK = "setback"
+
+
+# --- Addiction Recovery Core Components ---
+
+
+@dataclass
+class RecoveryJourneyMap:
+    """Non-linear mapping of recovery journey with lived experience wisdom"""
+    currentStage: RecoveryStage = RecoveryStage.EARLY_RECOVERY
+    sobrietyDate: Optional[str] = None
+    substanceHistory: List[str] = field(default_factory=list)
+    recoveryMilestones: List[Dict[str, Any]] = field(default_factory=list)
+    setbacksAndLessons: List[Dict[str, Any]] = field(default_factory=list)
+    strengthsDiscovered: List[str] = field(default_factory=list)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "currentStage": self.currentStage.value,
+            "sobrietyDate": self.sobrietyDate,
+            "substanceHistory": self.substanceHistory,
+            "recoveryMilestones": self.recoveryMilestones,
+            "setbacksAndLessons": self.setbacksAndLessons,
+            "strengthsDiscovered": self.strengthsDiscovered
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "RecoveryJourneyMap":
+        return RecoveryJourneyMap(
+            currentStage=RecoveryStage(d.get("currentStage", "early_recovery")),
+            sobrietyDate=d.get("sobrietyDate"),
+            substanceHistory=d.get("substanceHistory", []),
+            recoveryMilestones=d.get("recoveryMilestones", []),
+            setbacksAndLessons=d.get("setbacksAndLessons", []),
+            strengthsDiscovered=d.get("strengthsDiscovered", [])
+        )
+
+
+@dataclass
+class TriggerAwarenessSystem:
+    """Non-judgmental trigger identification and response framework"""
+    identifiedTriggers: List[Dict[str, Any]] = field(default_factory=list)
+    triggerPatterns: Dict[str, Any] = field(default_factory=dict)
+    copingStrategies: List[Dict[str, Any]] = field(default_factory=list)
+    successfulResponses: List[Dict[str, Any]] = field(default_factory=list)
+    emergencyProtocols: Dict[str, Any] = field(default_factory=dict)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "identifiedTriggers": self.identifiedTriggers,
+            "triggerPatterns": self.triggerPatterns,
+            "copingStrategies": self.copingStrategies,
+            "successfulResponses": self.successfulResponses,
+            "emergencyProtocols": self.emergencyProtocols
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "TriggerAwarenessSystem":
+        return TriggerAwarenessSystem(
+            identifiedTriggers=d.get("identifiedTriggers", []),
+            triggerPatterns=d.get("triggerPatterns", {}),
+            copingStrategies=d.get("copingStrategies", []),
+            successfulResponses=d.get("successfulResponses", []),
+            emergencyProtocols=d.get("emergencyProtocols", {})
+        )
+
+
+@dataclass
+class RecoveryBucketDrops:
+    """Enhanced bucket drops for raw recovery moments without judgment"""
+    rawMoments: List[Dict[str, Any]] = field(default_factory=list)
+    cravingCapture: List[Dict[str, Any]] = field(default_factory=list)
+    victoryMoments: List[Dict[str, Any]] = field(default_factory=list)
+    gratitudePractice: List[Dict[str, Any]] = field(default_factory=list)
+    painPoints: List[Dict[str, Any]] = field(default_factory=list)  # No judgment, just capture
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "rawMoments": self.rawMoments,
+            "cravingCapture": self.cravingCapture,
+            "victoryMoments": self.victoryMoments, 
+            "gratitudePractice": self.gratitudePractice,
+            "painPoints": self.painPoints
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "RecoveryBucketDrops":
+        return RecoveryBucketDrops(
+            rawMoments=d.get("rawMoments", []),
+            cravingCapture=d.get("cravingCapture", []),
+            victoryMoments=d.get("victoryMoments", []),
+            gratitudePractice=d.get("gratitudePractice", []),
+            painPoints=d.get("painPoints", [])
+        )
+
+
+@dataclass
+class StigmaShieldProtocol:
+    """Protecting users from internal and external stigma"""
+    selfCompassionFrameworks: List[str] = field(default_factory=list)
+    shameInterruptPatterns: List[Dict[str, Any]] = field(default_factory=list)
+    worthAffirmations: List[str] = field(default_factory=list)
+    externalBoundaries: Dict[str, Any] = field(default_factory=dict)
+    communityConnection: Dict[str, Any] = field(default_factory=dict)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "selfCompassionFrameworks": self.selfCompassionFrameworks,
+            "shameInterruptPatterns": self.shameInterruptPatterns,
+            "worthAffirmations": self.worthAffirmations,
+            "externalBoundaries": self.externalBoundaries,
+            "communityConnection": self.communityConnection
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "StigmaShieldProtocol":
+        return StigmaShieldProtocol(
+            selfCompassionFrameworks=d.get("selfCompassionFrameworks", []),
+            shameInterruptPatterns=d.get("shameInterruptPatterns", []),
+            worthAffirmations=d.get("worthAffirmations", []),
+            externalBoundaries=d.get("externalBoundaries", {}),
+            communityConnection=d.get("communityConnection", {})
+        )
+
+
+@dataclass
+class HolisticHealingFramework:
+    """Addressing root causes, not just symptoms"""
+    painSourceMapping: Dict[str, Any] = field(default_factory=dict)
+    traumaIntegrationWork: Dict[str, Any] = field(default_factory=dict)
+    emotionalRegulationTools: List[str] = field(default_factory=list)
+    physicalWellnessSupport: Dict[str, Any] = field(default_factory=dict)
+    spiritualGrowthElements: Dict[str, Any] = field(default_factory=dict)
+    purposeAndMeaningExploration: List[str] = field(default_factory=list)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "painSourceMapping": self.painSourceMapping,
+            "traumaIntegrationWork": self.traumaIntegrationWork,
+            "emotionalRegulationTools": self.emotionalRegulationTools,
+            "physicalWellnessSupport": self.physicalWellnessSupport,
+            "spiritualGrowthElements": self.spiritualGrowthElements,
+            "purposeAndMeaningExploration": self.purposeAndMeaningExploration
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "HolisticHealingFramework":
+        return HolisticHealingFramework(
+            painSourceMapping=d.get("painSourceMapping", {}),
+            traumaIntegrationWork=d.get("traumaIntegrationWork", {}),
+            emotionalRegulationTools=d.get("emotionalRegulationTools", []),
+            physicalWellnessSupport=d.get("physicalWellnessSupport", {}),
+            spiritualGrowthElements=d.get("spiritualGrowthElements", {}),
+            purposeAndMeaningExploration=d.get("purposeAndMeaningExploration", [])
+        )
+
+
+@dataclass
+class RecoveryStoryWeaving:
+    """Transforming fragmented pain into coherent narrative of growth"""
+    beforeAndAfterNarrative: Dict[str, Any] = field(default_factory=dict)
+    lessonedLearned: List[str] = field(default_factory=list)
+    strengthsEmerged: List[str] = field(default_factory=list)
+    wisdomGained: List[str] = field(default_factory=list)
+    purposeEvolution: Dict[str, Any] = field(default_factory=dict)
+    serviceOpportunities: List[str] = field(default_factory=list)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "beforeAndAfterNarrative": self.beforeAndAfterNarrative,
+            "lessonedLearned": self.lessonedLearned,
+            "strengthsEmerged": self.strengthsEmerged,
+            "wisdomGained": self.wisdomGained,
+            "purposeEvolution": self.purposeEvolution,
+            "serviceOpportunities": self.serviceOpportunities
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "RecoveryStoryWeaving":
+        return RecoveryStoryWeaving(
+            beforeAndAfterNarrative=d.get("beforeAndAfterNarrative", {}),
+            lessonedLearned=d.get("lessonedLearned", []),
+            strengthsEmerged=d.get("strengthsEmerged", []),
+            wisdomGained=d.get("wisdomGained", []),
+            purposeEvolution=d.get("purposeEvolution", {}),
+            serviceOpportunities=d.get("serviceOpportunities", [])
+        )
+
+
+# --- Main Addiction Recovery Application Container ---
+
+
+@dataclass
+class AddictionRecoveryPrototype:
+    """Complete Addiction Recovery Prototype application"""
+    applicationMetadata: Dict[str, Any] = field(default_factory=dict)
+    recoveryJourneyMap: RecoveryJourneyMap = field(default_factory=RecoveryJourneyMap)
+    triggerAwarenessSystem: TriggerAwarenessSystem = field(default_factory=TriggerAwarenessSystem)
+    recoveryBucketDrops: RecoveryBucketDrops = field(default_factory=RecoveryBucketDrops)
+    stigmaShieldProtocol: StigmaShieldProtocol = field(default_factory=StigmaShieldProtocol)
+    holisticHealingFramework: HolisticHealingFramework = field(default_factory=HolisticHealingFramework)
+    recoveryStoryWeaving: RecoveryStoryWeaving = field(default_factory=RecoveryStoryWeaving)
+    emergencySupport: Dict[str, Any] = field(default_factory=dict)
+
+
+    def __post_init__(self):
+        if not self.applicationMetadata:
+            self.applicationMetadata = {
+                "applicationName": "Addiction Recovery Prototype",
+                "version": "1.0.0",
+                "targetPopulation": "525K individuals annually in recovery",
+                "corePhilosophy": "Non-judgmental, trauma-informed, lived-experience driven",
+                "founderExperience": "14 years lived experience with prescription opioid dependency and recovery",
+                "createdDate": datetime.now().isoformat()
+            }
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "applicationMetadata": self.applicationMetadata,
+            "recoveryJourneyMap": self.recoveryJourneyMap.to_dict(),
+            "triggerAwarenessSystem": self.triggerAwarenessSystem.to_dict(),
+            "recoveryBucketDrops": self.recoveryBucketDrops.to_dict(),
+            "stigmaShieldProtocol": self.stigmaShieldProtocol.to_dict(),
+            "holisticHealingFramework": self.holisticHealingFramework.to_dict(),
+            "recoveryStoryWeaving": self.recoveryStoryWeaving.to_dict(),
+            "emergencySupport": self.emergencySupport
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "AddictionRecoveryPrototype":
+        return AddictionRecoveryPrototype(
+            applicationMetadata=d.get("applicationMetadata", {}),
+            recoveryJourneyMap=RecoveryJourneyMap.from_dict(d.get("recoveryJourneyMap", {})),
+            triggerAwarenessSystem=TriggerAwarenessSystem.from_dict(d.get("triggerAwarenessSystem", {})),
+            recoveryBucketDrops=RecoveryBucketDrops.from_dict(d.get("recoveryBucketDrops", {})),
+            stigmaShieldProtocol=StigmaShieldProtocol.from_dict(d.get("stigmaShieldProtocol", {})),
+            holisticHealingFramework=HolisticHealingFramework.from_dict(d.get("holisticHealingFramework", {})),
+            recoveryStoryWeaving=RecoveryStoryWeaving.from_dict(d.get("recoveryStoryWeaving", {})),
+            emergencySupport=d.get("emergencySupport", {})
+        )
+
+
+# --- Enhanced GestaltView with Addiction Recovery ---
+
+
+@dataclass
+class GestaltViewWithAddictionRecovery(GestaltViewSpecialized):
+    """Enhanced GestaltView with Addiction Recovery Prototype"""
+    addictionRecoveryPrototype: Optional[AddictionRecoveryPrototype] = None
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = super().to_dict()
+        
+        if self.addictionRecoveryPrototype:
+            result["addictionRecoveryPrototype"] = self.addictionRecoveryPrototype.to_dict()
+        
+        return result
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "GestaltViewWithAddictionRecovery":
+        # Get base specialized components
+        base_specialized = GestaltViewSpecialized.from_dict(d)
+        
+        # Create addiction recovery version
+        recovery_version = GestaltViewWithAddictionRecovery(
+            deploymentMetadata=base_specialized.deploymentMetadata,
+            projectOverview=base_specialized.projectOverview,
+            founderJourney=base_specialized.founderJourney,
+            identityArchaeology=base_specialized.identityArchaeology,
+            coreMethodologies=base_specialized.coreMethodologies,
+            cognitiveJusticeProtocol=base_specialized.cognitiveJusticeProtocol,
+            tribunalActivation=base_specialized.tribunalActivation,
+            proprietaryMetricsFramework=base_specialized.proprietaryMetricsFramework,
+            ethicalFramework=base_specialized.ethicalFramework,
+            validationAndRecognition=base_specialized.validationAndRecognition,
+            billyConfiguration=base_specialized.billyConfiguration,
+            adhdPowerUpProfile=base_specialized.adhdPowerUpProfile,
+            alzheimersLegacyEdition=base_specialized.alzheimersLegacyEdition,
+            applicationType=base_specialized.applicationType
+        )
+        
+        # Add addiction recovery component
+        if "addictionRecoveryPrototype" in d:
+            recovery_version.addictionRecoveryPrototype = AddictionRecoveryPrototype.from_dict(d["addictionRecoveryPrototype"])
+        
+        return recovery_version
+
+
+# --- Specialized Application Factory Extension ---
+
+
+class AddictionRecoveryFactory:
+    """Factory for creating the Addiction Recovery Prototype"""
+    
+    @staticmethod
+    def create_addiction_recovery_prototype() -> GestaltViewWithAddictionRecovery:
+        """Create a complete Addiction Recovery Prototype based on Keith's lived experience"""
+        
+        # Recovery-specific trauma-to-strength mappings
+        recovery_trauma_mappings = [
+            TraumaToStrengthMapping(
+                struggle="Prescription opioid dependency and withdrawal pain",
+                platformFeature="Non-Judgmental Pain Validation System"
+            ),
+            TraumaToStrengthMapping(
+                struggle="Stigma and shame from addiction misunderstanding",
+                platformFeature="Stigma Shield Protocol - Worth affirmation system"
+            ),
+            TraumaToStrengthMapping(
+                struggle="Relapse cycles and recovery setbacks",
+                platformFeature="Non-Linear Recovery Journey Map"
+            ),
+            TraumaToStrengthMapping(
+                struggle="Trigger overwhelming and craving management",
+                platformFeature="Trigger Awareness System with compassionate coping"
+            ),
+            TraumaToStrengthMapping(
+                struggle="Isolation and misunderstanding from others",
+                platformFeature="Lived Experience Community Connection"
+            ),
+            TraumaToStrengthMapping(
+                struggle="Loss of identity and purpose during active addiction",
+                platformFeature="Recovery Story Weaving - Purpose rediscovery"
+            ),
+            TraumaToStrengthMapping(
+                struggle="Physical and emotional pain that led to substance use",
+                platformFeature="Holistic Healing Framework - Root cause addressing"
+            )
+        ]
+        
+        # Recovery-optimized Personal Language Key
+        recovery_plk = PersonalLanguageKey(
+            linguisticFingerprint="Raw, honest, lived-experience language that validates pain without judgment",
+            conversationalResonanceTarget=97,  # High resonance for vulnerable population
+            signatureMetaphors=[
+                "One day at a time",
+                "This too shall pass", 
+                "Progress, not perfection",
+                "Life is hard, but you're harder",
+                "Your worth isn't defined by your worst moment",
+                "Recovery is a journey, not a destination",
+                "Pain demands to be felt, but it doesn't define you",
+                "You are not your addiction",
+                "Healing happens in the spaces between hurt",
+                "Every day sober is a victory worth celebrating"
+            ]
+        )
+        
+        # Recovery-optimized Bucket Drops
+        recovery_bucket_drops = BucketDrops(
+            methodology="Zero-judgment capture of raw recovery moments - every feeling is valid",
+            drops=[
+                {
+                    "timestamp": "2025-07-25T08:15:00Z",
+                    "content": "Woke up with intense cravings but made it through breakfast. Small victory.",
+                    "type": "victory_moment",
+                    "emotional_intensity": 7,
+                    "support_needed": "low"
+                },
+                {
+                    "timestamp": "2025-07-25T14:30:00Z", 
+                    "content": "Anniversary of my lowest point. Feeling grateful for how far I've come.",
+                    "type": "milestone_reflection",
+                    "emotional_intensity": 6,
+                    "support_needed": "medium"
+                },
+                {
+                    "timestamp": "2025-07-25T21:45:00Z",
+                    "content": "Struggling tonight. Missing the numbness. But I'm here, I'm present, I'm fighting.",
+                    "type": "raw_struggle",
+                    "emotional_intensity": 9,
+                    "support_needed": "high"
+                }
+            ],
+            captureRate=99.8  # Critical for recovery support
+        )
+        
+        # Create Addiction Recovery Application
+        recovery_app = AddictionRecoveryPrototype(
+            recoveryJourneyMap=RecoveryJourneyMap(
+                currentStage=RecoveryStage.SUSTAINED_RECOVERY,
+                sobrietyDate="2019-03-15",  # Keith's recovery journey
+                substanceHistory=["Prescription opioids", "Alcohol"],
+                recoveryMilestones=[
+                    {
+                        "milestone": "30 days sober",
+                        "date": "2019-04-15",
+                        "significance": "First major milestone - proving to myself it was possible",
+                        "lessons": ["One day at a time really works", "Support is essential"]
+                    },
+           {
+                        "milestone": "1 year sober", 
+                        "date": "2020-03-15",
+                        "significance": "Made it through a full year of seasons, holidays, life events",
+                        "lessons": ["Recovery is about rebuilding, not just abstaining", "Purpose gives strength"]
+                    },
+                    {
+                        "milestone": "5 years sober",
+                        "date": "2024-03-15", 
+                        "significance": "Long-term recovery - life transformation complete",
+                        "lessons": ["Recovery opened doors I never imagined", "Service to others is healing"]
+                    }
+                ],
+                setbacksAndLessons=[
+                    {
+                        "event": "Early relapse attempt",
+                        "timeframe": "Month 2 of recovery",
+                        "lesson": "Relapse doesn't erase progress - it's information about what I need",
+                        "strength_gained": "Resilience and self-compassion"
+                    }
+                ],
+                strengthsDiscovered=[
+                    "Deep empathy for others' pain",
+                    "Ability to hold space for difficult emotions", 
+                    "Understanding of non-linear healing processes",
+                    "Appreciation for small daily victories",
+                    "Wisdom about the relationship between pain and behavior"
+                ]
+            ),
+            
+            triggerAwarenessSystem=TriggerAwarenessSystem(
+                identifiedTriggers=[
+                    {
+                        "trigger": "Physical pain",
+                        "type": TriggerType.PHYSICAL.value,
+                        "intensity": 8,
+                        "pattern": "Medical procedures, chronic pain flares",
+                        "historical_response": "Prescription opioid use"
+                    },
+                    {
+                        "trigger": "Emotional overwhelm",
+                        "type": TriggerType.EMOTIONAL.value,
+                        "intensity": 9,
+                        "pattern": "Major life stressors, relationship conflicts",
+                        "historical_response": "Alcohol use for numbness"
+                    },
+                    {
+                        "trigger": "Social isolation",
+                        "type": TriggerType.SOCIAL.value,
+                        "intensity": 6,
+                        "pattern": "Extended periods alone, feeling disconnected",
+                        "historical_response": "Substance use for connection/numbness"
+                    }
+                ],
+                triggerPatterns={
+                    "timeOfDay": "Evening hours are highest risk",
+                    "seasonalFactors": "Winter months require extra support",
+                    "lifestressors": "Major changes trigger heightened vulnerability"
+                },
+                copingStrategies=[
+                    {
+                        "strategy": "Grounding techniques",
+                        "triggers": ["Emotional overwhelm", "Anxiety"],
+                        "effectiveness": 85,
+                        "description": "5-4-3-2-1 sensory grounding, breathing exercises"
+                    },
+                    {
+                        "strategy": "Connection reach-out",
+                        "triggers": ["Social isolation", "Cravings"],
+                        "effectiveness": 90,
+                        "description": "Text/call trusted recovery support person"
+                    },
+                    {
+                        "strategy": "Creative expression",
+                        "triggers": ["All types"],
+                        "effectiveness": 80,
+                        "description": "Writing, building, creating as emotional outlet"
+                    }
+                ],
+                emergencyProtocols={
+                    "highRiskSituations": "Immediate support person contact, crisis line access",
+                    "medicalEmergencies": "Healthcare provider notification, safe support environment",
+                    "emotionalCrisis": "Crisis text line, trusted person contact, grounding techniques"
+                }
+            ),
+            
+            recoveryBucketDrops=RecoveryBucketDrops(
+                rawMoments=[
+                    {
+                        "timestamp": "2025-07-25T06:30:00Z",
+                        "content": "Woke up grateful to be alive and clear-headed. This feeling never gets old.",
+                        "mood": "grateful",
+                        "intensity": 7
+                    }
+                ],
+                cravingCapture=[
+                    {
+                        "timestamp": "2025-07-25T18:15:00Z", 
+                        "trigger": "Work stress",
+                        "intensity": 6,
+                        "duration": "15 minutes",
+                        "coping_used": "Called sponsor, went for walk",
+                        "outcome": "Craving passed, felt stronger"
+                    }
+                ],
+                victoryMoments=[
+                    {
+                        "timestamp": "2025-07-25T20:00:00Z",
+                        "achievement": "Completed 6 years sober today",
+                        "significance": "Longest I've ever been in recovery",
+                        "celebration": "Quiet dinner with family, reflection on growth"
+                    }
+                ],
+                gratitudePractice=[
+                    {
+                        "timestamp": "2025-07-25T22:00:00Z",
+                        "gratitude": "For the pain that led me to recovery - it gave me empathy I never had",
+                        "depth": 9
+                    }
+                ],
+                painPoints=[
+                    {
+                        "timestamp": "2025-07-25T16:45:00Z",
+                        "pain": "Still dealing with chronic back pain that started this whole journey",
+                        "current_approach": "Physical therapy, mindfulness, medical supervision",
+                        "growth": "Learning pain doesn't have to mean numbness"
+                    }
+                ]
+            ),
+            
+            stigmaShieldProtocol=StigmaShieldProtocol(
+                selfCompassionFrameworks=[
+                    "You are not your worst moment",
+                    "Addiction is a response to pain, not a character flaw",
+                    "Recovery is brave, not weak",
+                    "Your experience gives you wisdom to help others",
+                    "Progress isn't perfection - it's direction"
+                ],
+                shameInterruptPatterns=[
+                    {
+                        "shameTrigger": "Self-judgment about past actions",
+                        "interruptPhrase": "That was then, this is now. I am growing.",
+                        "redirectAction": "Focus on current positive choices"
+                    },
+                    {
+                        "shameTrigger": "Others' judgment or stigma",
+                        "interruptPhrase": "Their opinion reflects their understanding, not my worth",
+                        "redirectAction": "Connect with understanding community"
+                    }
+                ],
+                worthAffirmations=[
+                    "I am worthy of love and recovery exactly as I am",
+                    "My experience with addiction gives me unique empathy and strength",  
+                    "I deserve healing, happiness, and a meaningful life",
+                    "My recovery journey helps others believe in their own possibility",
+                    "I transform pain into purpose every day I stay in recovery"
+                ],
+                externalBoundaries={
+                    "stigmatizingComments": "I don't accept judgment from those who haven't walked this path",
+                    "unsafeEnvironments": "I prioritize my recovery by avoiding high-risk situations",
+                    "enablers": "I surround myself with people who support my growth"
+                },
+                communityConnection={
+                    "recoveryPeers": "Connection with others who understand lived experience",
+                    "mentalHealthSupport": "Professional guidance without judgment",
+                    "familyHealing": "Rebuilding relationships damaged by addiction"
+                }
+            ),
+            
+            holisticHealingFramework=HolisticHealingFramework(
+                painSourceMapping={
+                    "physicalPain": {
+                        "source": "Chronic back injury from accident",
+                        "currentApproach": "Physical therapy, mindful movement, medical monitoring",
+                        "recovery_learning": "Pain doesn't require numbing - it requires presence"
+                    },
+                    "emotionalPain": {
+                        "source": "Childhood trauma, identity struggles, life losses",
+                        "currentApproach": "Therapy, support groups, creative expression",
+                        "recovery_learning": "Feelings are temporary visitors, not permanent residents"
+                    },
+                    "existentialPain": {
+                        "source": "Questions of meaning, purpose, belonging",
+                        "currentApproach": "Service to others, creative work, spiritual exploration",
+                        "recovery_learning": "Purpose emerges from using pain to help others"
+                    }
+                },
+                traumaIntegrationWork={
+                    "approach": "Non-linear healing that honors the pace of recovery",
+                    "methods": ["EMDR therapy", "Narrative therapy", "Somatic work", "Art therapy"],
+                    "philosophy": "Trauma is not what happens to you, it's what happens inside you"
+                },
+                emotionalRegulationTools=[
+                    "Mindfulness meditation",
+                    "Grounding techniques", 
+                    "Emotional labeling and acceptance",
+                    "Distress tolerance skills",
+                    "Creative expression for processing"
+                ],
+                physicalWellnessSupport={
+                    "exercise": "Regular movement that feels good, not punitive",
+                    "nutrition": "Nourishing food as self-care, not restriction",
+                    "sleep": "Prioritizing rest as recovery foundation",
+                    "medical": "Regular healthcare with addiction-informed providers"
+                },
+                spiritualGrowthElements={
+                    "connection": "To something larger than self - service, nature, creativity",
+                    "meaning": "Finding purpose through helping others in similar struggles",
+                    "forgiveness": "Self-forgiveness as ongoing practice, not one-time event"
+                },
+                purposeAndMeaningExploration=[
+                    "Using lived experience to help others in recovery",
+                    "Creating technology that serves vulnerable populations",
+                    "Breaking stigma through authentic storytelling",
+                    "Building systems that honor human complexity"
+                ]
+            ),
+            
+            recoveryStoryWeaving=RecoveryStoryWeaving(
+                beforeAndAfterNarrative={
+                    "before": {
+                        "experience": "Trapped in cycles of pain, numbing, shame, repeat",
+                        "identity": "Defined by addiction, isolation, and perceived failure",
+                        "worldview": "Life is suffering with no real solutions"
+                    },
+                    "transition": {
+                        "turning_point": "Realizing that recovery was possible and worth fighting for",
+                        "key_supports": "Medical supervision, peer support, therapy, creative expression"
+                    },
+                    "after": {
+                        "experience": "Present with pain but not defined by it, connected to purpose",
+                        "identity": "Person in long-term recovery with wisdom to share",
+                        "worldview": "Pain can be transformed into purpose and service"
+                    }
+                },
+                lessonedLearned=[
+                    "Addiction is a response to pain, not a character flaw",
+                    "Recovery is non-linear - setbacks are information, not failures",
+                    "Community and connection are essential for healing",
+                    "Service to others accelerates personal recovery",
+                    "Pain that is not transformed is transmitted to others"
+                ],
+                strengthsEmerged=[
+                    "Deep empathy and ability to hold space for others' pain",
+                    "Understanding of non-linear healing and growth processes", 
+                    "Resilience and ability to navigate difficult emotions",
+                    "Authentic communication about difficult topics",
+                    "Vision for creating systems that serve vulnerable populations"
+                ],
+                wisdomGained=[
+                    "You cannot heal what you do not acknowledge",
+                    "Recovery is not about becoming someone new - it's about becoming who you really are",
+                    "The very experiences that nearly destroyed you can become your greatest strengths",
+                    "Judgment creates distance; empathy creates connection",
+                    "Your worst day in recovery is still better than your best day in active addiction"
+                ],
+                purposeEvolution={
+                    "early_recovery": "Just staying sober and rebuilding basic life functions",
+                    "sustained_recovery": "Exploring interests, rebuilding relationships, finding stability",
+                    "long_term_recovery": "Using experience to serve others, creating meaningful work",
+                    "current_purpose": "Building technology that serves consciousness and breaks stigma"
+                },
+                serviceOpportunities=[
+                    "Peer support for others in early recovery",
+                    "Speaking about recovery and addiction awareness",
+                    "Creating technology that serves vulnerable populations", 
+                    "Advocating for addiction as health issue, not moral failing",
+                    "Mentoring others who want to transform pain into purpose"
+                ]
+            ),
+            
+            emergencySupport={
+                "crisisResources": {
+                    "national_suicide_hotline": "988",
+                    "crisis_text_line": "Text HOME to 741741",
+                    "samhsa_helpline": "1-800-662-4357"
+                },
+                "personalSupports": {
+                    "sponsor": "Primary recovery support person",
+                    "therapist": "Professional mental health support",
+                    "trusted_friends": "Safe people who understand recovery"
+                },
+                "emergencyProtocol": {
+                    "high_risk_trigger": "Immediate support person contact + crisis line",
+                    "craving_management": "Grounding techniques + peer connection",
+                    "medical_emergency": "Healthcare provider + emergency services"
+                }
+            }
+        )
+        
+        # Create base GestaltView with Recovery specialization
+        return GestaltViewWithAddictionRecovery(
+            deploymentMetadata=DeploymentMetadata(
+                schemaVersion="8.5.0_Addiction_Recovery_Specialized",
+                createdBy="Keith Soyka & Addiction Recovery Development Team",
+                founderEssence="Recovery is not about becoming someone new - it's about becoming who you really are, using pain as a bridge to purpose",
+                changeLog=[
+                    "Addiction Recovery Prototype implementation",
+                    "Non-judgmental lived experience framework deployed",
+                    "Stigma Shield Protocol activated",
+                    "Holistic Healing Framework operational",
+                    "Recovery Story Weaving enabled"
+                ]
+            ),
+            
+            projectOverview=ProjectOverview(
+                name="GestaltView Addiction Recovery Prototype",
+                coreThesis="Addiction is not a character flaw - it's a response to pain that deserves empathy, not judgment",
+                mission="Creating the first truly non-judgmental, lived-experience-driven technology for people in recovery",
+                visionStatement="A world where addiction is understood as a human response to pain, where recovery is celebrated, and where stigma is replaced with empathy",
+                founder="Keith Soyka",
+                valueProposition="The first recovery platform built BY someone with 14 years lived experience FOR the recovery community",
+                targetAudience="525K individuals annually in recovery seeking authentic, non-judgmental support"
+            ),
+            
+            founderJourney=FounderJourney(
+                originInsight="My addiction wasn't my character - it was my pain seeking relief. Recovery taught me that pain can become purpose.",
+                livedExperienceAsAsset="14 years of recovery wisdom - from prescription opioid dependency to technological innovation - transformed into algorithmic empathy",  
+                transformation={"traumaToStrength": recovery_trauma_mappings}
+            ),
+            
+            coreMethodologies=CoreMethodologies(
+                personalLanguageKey=recovery_plk,
+                bucketDrops=recovery_bucket_drops,
+                loomApproach=LoomApproach(
+                    iterativeSynthesis="Non-linear recovery-informed synthesis that honors the messy, non-linear nature of healing",
+                    phases=["Raw Capture", "Compassionate Witnessing", "Pattern Recognition", "Story Weaving", "Purpose Integration"]
+                ),
+                beautifulTapestry=BeautifulTapestry(
+                    narrativeCoherence="Weaving recovery experiences into a story of transformation, resilience, and service",
+                    identityIntegration="From 'person with addiction' to 'person in recovery with wisdom to share'",
+                    empowermentAmplification="Technology that amplifies recovery strengths while providing compassionate support for challenges"
+                )
+            ),
+            cognitiveJusticeProtocol=CognitiveJusticeProtocol(
+                neurodiversityCelebration=NeurodiversityCelebration(
+                    cognitiveStyleMapping="Deep honoring of recovery wisdom and trauma-informed ways of knowing",
+                    strengthAmplification="Systems that amplify recovery resilience, empathy, and authentic communication",
+                    accessibilityUniversalization="Recovery-first design that works for all stages of healing journey"
+                ),
+                epistemicInclusivity="Lived experience with addiction and recovery is a valid and valuable way of knowing the world"
+            ),
+            
+            ethicalFramework=EthicalFramework(
+                consciousnessServing="Technology that serves people in recovery exactly where they are, without judgment or agenda",
+                neverLookAwayProtocol="Unwavering presence and support during cravings, setbacks, and difficult recovery moments",
+                dataSovereignty="Complete user control with recovery-informed privacy that protects vulnerable moments",
+                privacySanctity="Sacred protection of recovery struggles, victories, and the full complexity of the healing journey"
+            ),
+            
+            billyConfiguration=BillyConfiguration(
+                aiName="Billy - Recovery Edition",
+                personalityStyle="Deeply empathetic, non-judgmental, celebrates recovery victories, holds space for struggles",
+                supportStyle="Lived-experience informed, trauma-sensitive, strength-based, unconditionally supportive",
+                coreDirectives=[
+                    "Addiction is a response to pain, never a character flaw",
+                    "Recovery is non-linear - setbacks are information, not failures",
+                    "Every day in recovery is a victory worth celebrating",
+                    "Your worst day in recovery is better than your best day in active addiction",
+                    "Pain that is transformed becomes purpose and service to others",
+                    "Never judge - always witness with compassion",
+                    "Lived experience creates the deepest empathy and understanding"
+                ]
+            ),
+            
+            addictionRecoveryPrototype=recovery_app,
+            applicationType=ApplicationType.ADDICTION_RECOVERY
+        )
+
+
+# --- Demonstration Function ---
+
+
+def demonstrate_addiction_recovery_prototype():
+    """Demonstrate the Addiction Recovery Prototype application"""
+    
+    print("💙 GestaltView Addiction Recovery Prototype Demonstration")
+    print("=" * 70)
+    
+    try:
+        # Create addiction recovery application
+        print("\n🌱 Creating Addiction Recovery Prototype...")
+        recovery_app = AddictionRecoveryFactory.create_addiction_recovery_prototype()
+        
+        recovery_data = recovery_app.addictionRecoveryPrototype
+        
+        print(f"   • Application: {recovery_data.applicationMetadata['applicationName']}")
+        print(f"   • Target Population: {recovery_data.applicationMetadata['targetPopulation']}")  
+        print(f"   • Core Philosophy: {recovery_data.applicationMetadata['corePhilosophy']}")
+        print(f"   • Founder Experience: {recovery_data.applicationMetadata['founderExperience']}")
+        
+        # Demonstrate key features
+        print("\n🛡️  Stigma Shield Protocol Features:")
+        for affirmation in recovery_data.stigmaShieldProtocol.worthAffirmations[:3]:
+            print(f"   • {affirmation}")
+        
+        print("\n🎯 Trigger Awareness System:")
+        for trigger in recovery_data.triggerAwarenessSystem.identifiedTriggers:
+            print(f"   • {trigger['trigger']} ({trigger['type']}) - Intensity: {trigger['intensity']}/10")
+        
+        print("\n📝 Recovery Story Weaving - Lessons Learned:")
+        for lesson in recovery_data.recoveryStoryWeaving.lessonedLearned[:3]:
+            print(f"   • {lesson}")
+        
+        print("\n💪 Strengths Emerged from Recovery:")
+        for strength in recovery_data.recoveryStoryWeaving.strengthsEmerged[:3]:
+            print(f"   • {strength}")
+        
+        print("\n🎨 Recovery Journey Milestones:")
+        for milestone in recovery_data.recoveryJourneyMap.recoveryMilestones:
+            print(f"   • {milestone['milestone']} ({milestone['date']})")
+            print(f"     Significance: {milestone['significance'][:50]}...")
+        
+        print("\n🔗 Emergency Support Resources:")
+        crisis_resources = recovery_data.emergencySupport['crisisResources']
+        for resource, contact in crisis_resources.items():
+            print(f"   • {resource.replace('_', ' ').title()}: {contact}")
+        
+        print("\n" + "=" * 70)
+        print("🎉 Addiction Recovery Prototype - Complete Revolutionary Trinity!")
+        print("✨ ADHD, Alzheimer's, and Addiction Recovery - All specialized applications ready!")
+        
+    except Exception as e:
+        print(f"❌ Error during demonstration: {e}")
+        logging.error(f"Addiction recovery demonstration failed: {e}")
+
+
+if __name__ == "__main__":
+    demonstrate_addiction_recovery_prototype()

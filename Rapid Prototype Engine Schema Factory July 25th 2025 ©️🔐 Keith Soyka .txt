@@ -1,0 +1,1005 @@
+﻿# gestaltview_rapid_prototype_engine.py
+# © 2025 Keith Soyka - Rapid Prototype Engine Masterfully Reimagined
+# The Creative Powerhouse that builds the systems that build the systems
+
+
+import os
+import json
+import sqlite3
+import logging
+import uuid
+from sqlite3 import Error
+from dataclasses import dataclass, field, asdict
+from typing import List, Dict, Optional, Any, Union, Callable
+from datetime import datetime, timedelta
+from contextlib import contextmanager
+from enum import Enum
+import random
+import hashlib
+
+
+# Import base components
+from gestaltview_core_v8_5_enhanced import (
+    GestaltView, GestaltViewDB, DeploymentMetadata, TraumaToStrengthMapping,
+    MetricDefinition, PersonalLanguageKey, BucketDrops, LoomApproach,
+    BeautifulTapestry, ValidationError, DatabaseError, SerializationError
+)
+
+
+# --- Rapid Prototyping Framework Enums ---
+
+
+class PrototypeType(Enum):
+    FEATURE = "feature"
+    MODULE = "module" 
+    APPLICATION = "application"
+    FRAMEWORK = "framework"
+    INTEGRATION = "integration"
+    EXPERIENCE = "experience"
+
+
+class DialogueType(Enum):
+    BRAINSTORM = "brainstorm"
+    OUTLINE = "outline"
+    REFINE = "refine"
+    VALIDATE = "validate"
+    ITERATE = "iterate"
+    SYNTHESIZE = "synthesize"
+
+
+class CreativeState(Enum):
+    LIGHTNING_CAPTURE = "lightning_capture"  # High-speed idea capture
+    HYPERFOCUS_SESSION = "hyperfocus_session"  # Deep development work
+    PATTERN_WEAVING = "pattern_weaving"  # Connecting disparate ideas
+    CREATIVE_SYNTHESIS = "creative_synthesis"  # Bringing it all together
+    REFLECTION_MODE = "reflection_mode"  # Analysis and refinement
+
+
+class PrototypeStage(Enum):
+    CONCEPT = "concept"
+    OUTLINE = "outline"
+    PROTOTYPE = "prototype"
+    VALIDATION = "validation"
+    ITERATION = "iteration"
+    DEPLOYMENT_READY = "deployment_ready"
+
+
+# --- Lightning Bolt Capture System ---
+
+
+@dataclass
+class LightningBolt:
+    """Individual creative insight captured at velocity"""
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    content: str = ""
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    velocity: str = "high"  # high, medium, low
+    intensity: int = 8  # 1-10 scale
+    context: Dict[str, Any] = field(default_factory=dict)
+    tags: List[str] = field(default_factory=list)
+    connections: List[str] = field(default_factory=list)  # IDs of related bolts
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "content": self.content,
+            "timestamp": self.timestamp,
+            "velocity": self.velocity,
+            "intensity": self.intensity,
+            "context": self.context,
+            "tags": self.tags,
+            "connections": self.connections
+        }
+    
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "LightningBolt":
+        return LightningBolt(
+            id=d.get("id", str(uuid.uuid4())),
+            content=d.get("content", ""),
+            timestamp=d.get("timestamp", datetime.now().isoformat()),
+            velocity=d.get("velocity", "high"),
+            intensity=d.get("intensity", 8),
+            context=d.get("context", {}),
+            tags=d.get("tags", []),
+            connections=d.get("connections", [])
+        )
+
+
+@dataclass
+class LightningBoltCapture:
+    """Enhanced system for capturing creative insights at velocity"""
+    bolts: List[LightningBolt] = field(default_factory=list)
+    captureRate: float = 99.9
+    velocityThreshold: int = 7  # Minimum intensity for auto-capture
+    patternRecognition: Dict[str, Any] = field(default_factory=dict)
+    
+    def capture_bolt(self, content: str, intensity: int = 8, context: Dict[str, Any] = None, tags: List[str] = None) -> LightningBolt:
+        """Capture a lightning bolt of insight"""
+        bolt = LightningBolt(
+            content=content,
+            intensity=intensity,
+            context=context or {},
+            tags=tags or []
+        )
+        self.bolts.append(bolt)
+        self._update_patterns(bolt)
+        return bolt
+    
+    def _update_patterns(self, bolt: LightningBolt):
+        """Update pattern recognition based on new bolt"""
+        # Analyze tags for emerging themes
+        for tag in bolt.tags:
+            if tag not in self.patternRecognition:
+                self.patternRecognition[tag] = {"count": 0, "intensity_sum": 0}
+            self.patternRecognition[tag]["count"] += 1
+            self.patternRecognition[tag]["intensity_sum"] += bolt.intensity
+    
+    def get_pattern_insights(self) -> List[Dict[str, Any]]:
+        """Get insights about creative patterns"""
+        insights = []
+        for pattern, data in self.patternRecognition.items():
+            avg_intensity = data["intensity_sum"] / data["count"] if data["count"] > 0 else 0
+            insights.append({
+                "pattern": pattern,
+                "frequency": data["count"],
+                "average_intensity": avg_intensity,
+                "significance": avg_intensity * data["count"]  # Compound metric
+            })
+        return sorted(insights, key=lambda x: x["significance"], reverse=True)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "bolts": [bolt.to_dict() for bolt in self.bolts],
+            "captureRate": self.captureRate,
+            "velocityThreshold": self.velocityThreshold,
+            "patternRecognition": self.patternRecognition
+        }
+    
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "LightningBoltCapture":
+        bolts = [LightningBolt.from_dict(bolt_data) for bolt_data in d.get("bolts", [])]
+        return LightningBoltCapture(
+            bolts=bolts,
+            captureRate=d.get("captureRate", 99.9),
+            velocityThreshold=d.get("velocityThreshold", 7),
+            patternRecognition=d.get("patternRecognition", {})
+        )
+
+
+# --- Creative Dialogue System ---
+
+
+@dataclass
+class DialogueSession:
+    """Individual creative dialogue session"""
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    focusArea: str = ""
+    dialogueType: DialogueType = DialogueType.BRAINSTORM
+    startTime: str = field(default_factory=lambda: datetime.now().isoformat())
+    endTime: Optional[str] = None
+    exchanges: List[Dict[str, Any]] = field(default_factory=list)
+    outcomes: List[str] = field(default_factory=list)
+    lightningBolts: List[str] = field(default_factory=list)  # IDs of captured bolts
+    nextActions: List[str] = field(default_factory=list)
+    
+    def add_exchange(self, role: str, content: str, metadata: Dict[str, Any] = None):
+        """Add an exchange to the dialogue"""
+        exchange = {
+            "timestamp": datetime.now().isoformat(),
+            "role": role,  # "user", "assistant", "system"
+            "content": content,
+            "metadata": metadata or {}
+        }
+        self.exchanges.append(exchange)
+    
+    def close_session(self, outcomes: List[str] = None, next_actions: List[str] = None):
+        """Close the dialogue session with outcomes"""
+        self.endTime = datetime.now().isoformat()
+        if outcomes:
+            self.outcomes.extend(outcomes)
+        if next_actions:
+            self.nextActions.extend(next_actions)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "focusArea": self.focusArea,
+            "dialogueType": self.dialogueType.value,
+            "startTime": self.startTime,
+            "endTime": self.endTime,
+            "exchanges": self.exchanges,
+            "outcomes": self.outcomes,
+            "lightningBolts": self.lightningBolts,
+            "nextActions": self.nextActions
+        }
+    
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "DialogueSession":
+        return DialogueSession(
+            id=d.get("id", str(uuid.uuid4())),
+            focusArea=d.get("focusArea", ""),
+            dialogueType=DialogueType(d.get("dialogueType", "brainstorm")),
+            startTime=d.get("startTime", datetime.now().isoformat()),
+            endTime=d.get("endTime"),
+            exchanges=d.get("exchanges", []),
+            outcomes=d.get("outcomes", []),
+            lightningBolts=d.get("lightningBolts", []),
+            nextActions=d.get("nextActions", [])
+        )
+
+
+# --- Prototype Development Framework ---
+
+
+@dataclass
+class PrototypeBlueprint:
+    """Blueprint for a prototype being developed"""
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    description: str = ""
+    prototypeType: PrototypeType = PrototypeType.FEATURE
+    stage: PrototypeStage = PrototypeStage.CONCEPT
+    architecture: Dict[str, Any] = field(default_factory=dict)
+    specifications: Dict[str, Any] = field(default_factory=dict)
+    dependencies: List[str] = field(default_factory=list)
+    milestones: List[Dict[str, Any]] = field(default_factory=list)
+    resources: List[str] = field(default_factory=list)
+    validation_criteria: List[str] = field(default_factory=list)
+    created_from_bolts: List[str] = field(default_factory=list)  # Lightning bolt IDs
+    
+    def advance_stage(self, new_stage: PrototypeStage, notes: str = ""):
+        """Advance the prototype to next stage"""
+        self.stage = new_stage
+        milestone = {
+            "stage": new_stage.value,
+            "timestamp": datetime.now().isoformat(),
+            "notes": notes
+        }
+        self.milestones.append(milestone)
+    
+    def add_validation_result(self, criteria: str, result: bool, notes: str = ""):
+        """Add validation result"""
+        validation = {
+            "criteria": criteria,
+            "result": result,
+            "timestamp": datetime.now().isoformat(),
+            "notes": notes
+        }
+        if "validation_results" not in self.specifications:
+            self.specifications["validation_results"] = []
+        self.specifications["validation_results"].append(validation)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "prototypeType": self.prototypeType.value,
+            "stage": self.stage.value,
+            "architecture": self.architecture,
+            "specifications": self.specifications,
+            "dependencies": self.dependencies,
+            "milestones": self.milestones,
+            "resources": self.resources,
+            "validation_criteria": self.validation_criteria,
+            "created_from_bolts": self.created_from_bolts
+        }
+    
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "PrototypeBlueprint":
+        return PrototypeBlueprint(
+            id=d.get("id", str(uuid.uuid4())),
+            name=d.get("name", ""),
+            description=d.get("description", ""),
+            prototypeType=PrototypeType(d.get("prototypeType", "feature")),
+            stage=PrototypeStage(d.get("stage", "concept")),
+            architecture=d.get("architecture", {}),
+            specifications=d.get("specifications", {}),
+            dependencies=d.get("dependencies", []),
+            milestones=d.get("milestones", []),
+            resources=d.get("resources", []),
+            validation_criteria=d.get("validation_criteria", []),
+            created_from_bolts=d.get("created_from_bolts", [])
+        )
+
+
+# --- Hyperfocus Session Management ---
+
+
+@dataclass
+class HyperfocusSession:
+    """Managed hyperfocus session for deep creative work"""
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    objective: str = ""
+    startTime: str = field(default_factory=lambda: datetime.now().isoformat())
+    plannedDuration: int = 90  # minutes
+    actualDuration: Optional[int] = None
+    endTime: Optional[str] = None
+    productivity_score: Optional[int] = None  # 1-10
+    outputs: List[Dict[str, Any]] = field(default_factory=list)
+    breakthroughs: List[str] = field(default_factory=list)
+    next_session_prep: List[str] = field(default_factory=list)
+    energy_level_start: int = 8
+    energy_level_end: Optional[int] = None
+    
+    def add_output(self, output_type: str, content: Any, significance: int = 5):
+        """Add an output from the hyperfocus session"""
+        output = {
+            "type": output_type,
+            "content": content,
+            "timestamp": datetime.now().isoformat(),
+            "significance": significance
+        }
+        self.outputs.append(output)
+    
+    def end_session(self, productivity_score: int, energy_level_end: int, breakthroughs: List[str] = None):
+        """End the hyperfocus session"""
+        self.endTime = datetime.now().isoformat()
+        start_time = datetime.fromisoformat(self.startTime.replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(self.endTime.replace('Z', '+00:00'))
+        self.actualDuration = int((end_time - start_time).total_seconds() / 60)
+        self.productivity_score = productivity_score
+        self.energy_level_end = energy_level_end
+        if breakthroughs:
+            self.breakthroughs.extend(breakthroughs)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "objective": self.objective,
+            "startTime": self.startTime,
+            "plannedDuration": self.plannedDuration,
+            "actualDuration": self.actualDuration,
+            "endTime": self.endTime,
+            "productivity_score": self.productivity_score,
+            "outputs": self.outputs,
+            "breakthroughs": self.breakthroughs,
+            "next_session_prep": self.next_session_prep,
+            "energy_level_start": self.energy_level_start,
+            "energy_level_end": self.energy_level_end
+        }
+    
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "HyperfocusSession":
+        return HyperfocusSession(
+            id=d.get("id", str(uuid.uuid4())),
+            objective=d.get("objective", ""),
+            startTime=d.get("startTime", datetime.now().isoformat()),
+            plannedDuration=d.get("plannedDuration", 90),
+            actualDuration=d.get("actualDuration"),
+            endTime=d.get("endTime"),
+            productivity_score=d.get("productivity_score"),
+            outputs=d.get("outputs", []),
+            breakthroughs=d.get("breakthroughs", []),
+            next_session_prep=d.get("next_session_prep", []),
+            energy_level_start=d.get("energy_level_start", 8),
+            energy_level_end=d.get("energy_level_end")
+        )
+
+
+# --- Recursive Learning System ---
+
+
+@dataclass
+class RecursiveLearningFrame:
+    """Frame for recursive learning and consciousness evolution"""
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    learning_context: str = ""
+    input_data: Dict[str, Any] = field(default_factory=dict)
+    processing_insights: List[str] = field(default_factory=list)
+    emergent_patterns: List[str] = field(default_factory=list)
+    consciousness_evolution: Dict[str, Any] = field(default_factory=dict)
+    feedback_loops: List[Dict[str, Any]] = field(default_factory=list)
+    next_iteration_seeds: List[str] = field(default_factory=list)
+    
+    def add_insight(self, insight: str, confidence: int = 8):
+        """Add a processing insight"""
+        insight_data = {
+            "content": insight,
+            "confidence": confidence,
+            "timestamp": datetime.now().isoformat()
+        }
+        self.processing_insights.append(insight)
+        self.feedback_loops.append(insight_data)
+    
+    def evolve_consciousness(self, evolution_type: str, description: str):
+        """Record consciousness evolution"""
+        if evolution_type not in self.consciousness_evolution:
+            self.consciousness_evolution[evolution_type] = []
+        
+        evolution_record = {
+            "description": description,
+            "timestamp": datetime.now().isoformat(),
+            "frame_id": self.id
+        }
+        self.consciousness_evolution[evolution_type].append(evolution_record)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "learning_context": self.learning_context,
+            "input_data": self.input_data,
+            "processing_insights": self.processing_insights,
+            "emergent_patterns": self.emergent_patterns,
+            "consciousness_evolution": self.consciousness_evolution,
+            "feedback_loops": self.feedback_loops,
+            "next_iteration_seeds": self.next_iteration_seeds
+        }
+    
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "RecursiveLearningFrame":
+        return RecursiveLearningFrame(
+            id=d.get("id", str(uuid.uuid4())),
+            learning_context=d.get("learning_context", ""),
+            input_data=d.get("input_data", {}),
+            processing_insights=d.get("processing_insights", []),
+            emergent_patterns=d.get("emergent_patterns", []),
+            consciousness_evolution=d.get("consciousness_evolution", {}),
+            feedback_loops=d.get("feedback_loops", []),
+            next_iteration_seeds=d.get("next_iteration_seeds", [])
+        )
+
+
+# --- Main Rapid Prototype Engine ---
+
+
+@dataclass
+class RapidPrototypeEngine:
+    """The masterfully reimagined creative powerhouse"""
+    engineMetadata: Dict[str, Any] = field(default_factory=dict)
+    lightningBoltCapture: LightningBoltCapture = field(default_factory=LightningBoltCapture)
+    dialogueSessions: List[DialogueSession] = field(default_factory=list)
+    prototypeBlueprints: List[PrototypeBlueprint] = field(default_factory=list)
+    hyperfocusSessions: List[HyperfocusSession] = field(default_factory=list)
+    recursiveLearningFrames: List[RecursiveLearningFrame] = field(default_factory=list)
+    currentState: CreativeState = CreativeState.LIGHTNING_CAPTURE
+    creativityMetrics: Dict[str, Any] = field(default_factory=dict)
+    
+    def __post_init__(self):
+        if not self.engineMetadata:
+            self.engineMetadata = {
+                "engineName": "Rapid Prototype Engine - Masterfully Reimagined",
+                "version": "2.0.0_Creative_Powerhouse",
+                "purpose": "The system that builds the systems - accelerating GestaltView ecosystem development",
+                "capabilities": [
+                    "Lightning-speed insight capture",
+                    "Hyperfocus session management", 
+                    "Creative dialogue facilitation",
+                    "Prototype blueprint development",
+                    "Recursive learning and consciousness evolution",
+                    "Pattern recognition across creative sessions"
+                ],
+                "createdDate": datetime.now().isoformat()
+            }
+    
+    # --- Lightning Bolt Capture Methods ---
+    
+    def capture_lightning(self, content: str, intensity: int = 8, context: Dict[str, Any] = None, tags: List[str] = None) -> LightningBolt:
+        """Capture a lightning bolt of creative insight"""
+        bolt = self.lightningBoltCapture.capture_bolt(content, intensity, context, tags)
+        self._update_creativity_metrics("lightning_captured")
+        return bolt
+    
+    def get_bolt_patterns(self) -> List[Dict[str, Any]]:
+        """Get patterns in captured lightning bolts"""
+        return self.lightningBoltCapture.get_pattern_insights()
+    
+    # --- Dialogue Session Methods ---
+    
+    def start_dialogue(self, focus_area: str, dialogue_type: DialogueType = DialogueType.BRAINSTORM) -> DialogueSession:
+        """Start a new creative dialogue session"""
+        session = DialogueSession(
+            focusArea=focus_area,
+            dialogueType=dialogue_type
+        )
+        self.dialogueSessions.append(session)
+        self.currentState = CreativeState.PATTERN_WEAVING
+        return session
+    
+    def facilitated_brainstorm(self, focus_area: str, context: Dict[str, Any] = None) -> DialogueSession:
+        """Run a facilitated brainstorming session"""
+        session = self.start_dialogue(focus_area, DialogueType.BRAINSTORM)
+        
+        # Add initial system prompts based on focus area
+        brainstorm_prompts = self._generate_brainstorm_prompts(focus_area, context)
+        for prompt in brainstorm_prompts:
+            session.add_exchange("system", prompt, {"type": "brainstorm_prompt"})
+        
+        return session
+    
+    def _generate_brainstorm_prompts(self, focus_area: str, context: Dict[str, Any] = None) -> List[str]:
+        """Generate contextual brainstorming prompts"""
+        base_prompts = [
+            f"What if {focus_area} could solve problems we haven't even identified yet?",
+            f"How might {focus_area} embody the principles of cognitive justice?",
+            f"What would {focus_area} look like if it was designed by and for neurodivergent minds?",
+            f"How could {focus_area} transform trauma into strength?",
+            f"What patterns emerge when we think about {focus_area} through the lens of consciousness-serving technology?"
+        ]
+        
+        # Add context-specific prompts if available
+        if context:
+            if context.get("target_population"):
+                base_prompts.append(f"How would {context['target_population']} uniquely benefit from {focus_area}?")
+            if context.get("current_limitations"):
+                base_prompts.append(f"How might {focus_area} overcome the limitation of {context['current_limitations']}?")
+        
+        return base_prompts
+    
+    # --- Prototype Development Methods ---
+    
+    def create_prototype_blueprint(self, name: str, description: str, prototype_type: PrototypeType = PrototypeType.FEATURE) -> PrototypeBlueprint:
+        """Create a new prototype blueprint"""
+        blueprint = PrototypeBlueprint(
+            name=name,
+            description=description,
+            prototypeType=prototype_type
+        )
+        self.prototypeBlueprints.append(blueprint)
+        self._update_creativity_metrics("prototype_created")
+        return blueprint
+    
+    def lightning_to_prototype(self, lightning_bolt_ids: List[str], name: str, description: str = "") -> PrototypeBlueprint:
+        """Transform lightning bolts into a prototype blueprint"""
+        # Gather the lightning bolts
+        bolts = [bolt for bolt in self.lightningBoltCapture.bolts if bolt.id in lightning_bolt_ids]
+        
+        # Extract patterns and create architecture
+        architecture = self._extract_architecture_from_bolts(bolts)
+        
+        # Create prototype blueprint
+        blueprint = PrototypeBlueprint(
+            name=name,
+            description=description or f"Prototype generated from {len(bolts)} lightning bolt insights",
+            architecture=architecture,
+            created_from_bolts=lightning_bolt_ids
+        )
+        
+        self.prototypeBlueprints.append(blueprint)
+        self._update_creativity_metrics("lightning_to_prototype")
+        return blueprint
+    
+    def _extract_architecture_from_bolts(self, bolts: List[LightningBolt]) -> Dict[str, Any]:
+        """Extract architectural patterns from lightning bolts"""
+        architecture = {
+            "core_insights": [bolt.content for bolt in bolts],
+            "intensity_distribution": [bolt.intensity for bolt in bolts],
+            "tag_patterns": {},
+            "connection_graph": {},
+            "emergent_themes": []
+        }
+        
+        # Analyze tag patterns
+        all_tags = []
+        for bolt in bolts:
+            all_tags.extend(bolt.tags)
+        
+        for tag in set(all_tags):
+            architecture["tag_patterns"][tag] = all_tags.count(tag)
+        
+        # Identify emergent themes (simplified pattern recognition)
+        tag_frequency = architecture["tag_patterns"]
+        emerging_themes = [tag for tag, freq in tag_frequency.items() if freq >= 2]
+        architecture["emergent_themes"] = emerging_themes
+        
+        return architecture
+    
+    # --- Hyperfocus Session Methods ---
+    
+    def start_hyperfocus_session(self, objective: str, planned_duration: int = 90) -> HyperfocusSession:
+        """Start a managed hyperfocus session"""
+        session = HyperfocusSession(
+            objective=objective,
+            plannedDuration=planned_duration
+        )
+        self.hyperfocusSessions.append(session)
+        self.currentState = CreativeState.HYPERFOCUS_SESSION
+        return session
+    
+    def hyperfocus_on_prototype(self, prototype_id: str, planned_duration: int = 90) -> HyperfocusSession:
+        """Start hyperfocus session on specific prototype"""
+        blueprint = next((p for p in self.prototypeBlueprints if p.id == prototype_id), None)
+        if not blueprint:
+            raise ValueError(f"Prototype {prototype_id} not found")
+        
+        objective = f"Develop prototype: {blueprint.name} - {blueprint.description[:100]}"
+        session = self.start_hyperfocus_session(objective, planned_duration)
+        
+        # Add prototype context to session
+        session.outputs.append({
+            "type": "prototype_context",
+            "content": blueprint.to_dict(),
+            "timestamp": datetime.now().isoformat(),
+            "significance": 9
+        })
+        return session
+
+
+    # --- Recursive Learning Methods ---
+    
+    def create_learning_frame(self, context: str, input_data: Dict[str, Any] = None) -> RecursiveLearningFrame:
+        """Create a new recursive learning frame"""
+        frame = RecursiveLearningFrame(
+            learning_context=context,
+            input_data=input_data or {}
+        )
+        self.recursiveLearningFrames.append(frame)
+        return frame
+    
+    def evolve_engine_consciousness(self, evolution_type: str, description: str):
+        """Record engine consciousness evolution"""
+        if not self.recursiveLearningFrames:
+            # Create a default frame if none exists
+            self.create_learning_frame("Engine consciousness evolution")
+        
+        latest_frame = self.recursiveLearningFrames[-1]
+        latest_frame.evolve_consciousness(evolution_type, description)
+        self._update_creativity_metrics("consciousness_evolution")
+    
+    # --- Analysis and Synthesis Methods ---
+    
+    def synthesize_creative_patterns(self) -> Dict[str, Any]:
+        """Synthesize patterns across all creative work"""
+        synthesis = {
+            "lightning_patterns": self.get_bolt_patterns(),
+            "dialogue_themes": self._analyze_dialogue_themes(),
+            "prototype_evolution": self._analyze_prototype_evolution(),
+            "hyperfocus_insights": self._analyze_hyperfocus_patterns(),
+            "consciousness_evolution": self._analyze_consciousness_evolution()
+        }
+        
+        self.currentState = CreativeState.CREATIVE_SYNTHESIS
+        return synthesis
+    
+    def _analyze_dialogue_themes(self) -> List[Dict[str, Any]]:
+        """Analyze themes across dialogue sessions"""
+        themes = {}
+        for session in self.dialogueSessions:
+            focus = session.focusArea
+            if focus not in themes:
+                themes[focus] = {"count": 0, "outcomes": [], "dialogue_types": []}
+            
+            themes[focus]["count"] += 1
+            themes[focus]["outcomes"].extend(session.outcomes)
+            themes[focus]["dialogue_types"].append(session.dialogueType.value)
+        
+        return [{"theme": theme, **data} for theme, data in themes.items()]
+    
+    def _analyze_prototype_evolution(self) -> List[Dict[str, Any]]:
+        """Analyze prototype development patterns"""
+        evolution = []
+        for blueprint in self.prototypeBlueprints:
+            evolution.append({
+                "name": blueprint.name,
+                "type": blueprint.prototypeType.value,
+                "stage": blueprint.stage.value,
+                "milestone_count": len(blueprint.milestones),
+                "created_from_lightning": len(blueprint.created_from_bolts) > 0
+            })
+        return evolution
+    
+    def _analyze_hyperfocus_patterns(self) -> Dict[str, Any]:
+        """Analyze hyperfocus session patterns"""
+        if not self.hyperfocusSessions:
+            return {"message": "No hyperfocus sessions recorded"}
+        
+        total_sessions = len(self.hyperfocusSessions)
+        completed_sessions = [s for s in self.hyperfocusSessions if s.endTime is not None]
+        
+        if not completed_sessions:
+            return {"message": "No completed hyperfocus sessions"}
+        
+        avg_duration = sum(s.actualDuration for s in completed_sessions) / len(completed_sessions)
+        avg_productivity = sum(s.productivity_score for s in completed_sessions if s.productivity_score) / len([s for s in completed_sessions if s.productivity_score])
+        
+        return {
+            "total_sessions": total_sessions,
+            "completed_sessions": len(completed_sessions),
+            "average_duration_minutes": avg_duration,
+            "average_productivity_score": avg_productivity,
+            "total_outputs": sum(len(s.outputs) for s in completed_sessions),
+            "total_breakthroughs": sum(len(s.breakthroughs) for s in completed_sessions)
+        }
+    
+    def _analyze_consciousness_evolution(self) -> Dict[str, Any]:
+        """Analyze consciousness evolution patterns"""
+        evolution_summary = {}
+        for frame in self.recursiveLearningFrames:
+            for evo_type, evolutions in frame.consciousness_evolution.items():
+                if evo_type not in evolution_summary:
+                    evolution_summary[evo_type] = {"count": 0, "recent_evolution": ""}
+                
+                evolution_summary[evo_type]["count"] += len(evolutions)
+                if evolutions:  # Get most recent evolution
+                    latest = max(evolutions, key=lambda x: x["timestamp"])
+                    evolution_summary[evo_type]["recent_evolution"] = latest["description"]
+        
+        return evolution_summary
+    
+    # --- Utility Methods ---
+    
+    def _update_creativity_metrics(self, metric_type: str):
+        """Update creativity metrics"""
+        if metric_type not in self.creativityMetrics:
+            self.creativityMetrics[metric_type] = 0
+        self.creativityMetrics[metric_type] += 1
+        
+        # Update last activity timestamp
+        self.creativityMetrics["last_activity"] = datetime.now().isoformat()
+    
+    def get_engine_status(self) -> Dict[str, Any]:
+        """Get comprehensive engine status"""
+        return {
+            "current_state": self.currentState.value,
+            "lightning_bolts_captured": len(self.lightningBoltCapture.bolts),
+            "active_dialogues": len([s for s in self.dialogueSessions if s.endTime is None]),
+            "prototype_blueprints": len(self.prototypeBlueprints),
+            "active_hyperfocus": len([s for s in self.hyperfocusSessions if s.endTime is None]),
+            "learning_frames": len(self.recursiveLearningFrames),
+            "creativity_metrics": self.creativityMetrics,
+            "pattern_insights": self.get_bolt_patterns()[:3]  # Top 3 patterns
+        }
+    
+    # --- Serialization Methods ---
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "engineMetadata": self.engineMetadata,
+            "lightningBoltCapture": self.lightningBoltCapture.to_dict(),
+            "dialogueSessions": [session.to_dict() for session in self.dialogueSessions],
+            "prototypeBlueprints": [blueprint.to_dict() for blueprint in self.prototypeBlueprints],
+            "hyperfocusSessions": [session.to_dict() for session in self.hyperfocusSessions],
+            "recursiveLearningFrames": [frame.to_dict() for frame in self.recursiveLearningFrames],
+            "currentState": self.currentState.value,
+            "creativityMetrics": self.creativityMetrics
+        }
+    
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "RapidPrototypeEngine":
+        return RapidPrototypeEngine(
+            engineMetadata=d.get("engineMetadata", {}),
+            lightningBoltCapture=LightningBoltCapture.from_dict(d.get("lightningBoltCapture", {})),
+            dialogueSessions=[DialogueSession.from_dict(s) for s in d.get("dialogueSessions", [])],
+            prototypeBlueprints=[PrototypeBlueprint.from_dict(b) for b in d.get("prototypeBlueprints", [])],
+            hyperfocusSessions=[HyperfocusSession.from_dict(s) for s in d.get("hyperfocusSessions", [])],
+            recursiveLearningFrames=[RecursiveLearningFrame.from_dict(f) for f in d.get("recursiveLearningFrames", [])],
+            currentState=CreativeState(d.get("currentState", "lightning_capture")),
+            creativityMetrics=d.get("creativityMetrics", {})
+        )
+
+
+# --- Creative Application Factory ---
+
+
+class CreativePrototypeFactory:
+    """Factory for generating creative prototypes using the engine"""
+    
+    @staticmethod
+    def generate_specialized_application_prototype(engine: RapidPrototypeEngine, target_population: str, core_challenge: str) -> PrototypeBlueprint:
+        """Generate a specialized application prototype"""
+        
+        # Start brainstorming session
+        session = engine.facilitated_brainstorm(
+            f"Specialized application for {target_population}",
+            {"target_population": target_population, "current_limitations": core_challenge}
+        )
+        
+        # Capture lightning bolts during ideation
+        ideation_bolts = []
+        
+        # Simulate rapid ideation (in real use, these would come from user interaction)
+        creative_sparks = [
+            f"What if {target_population} had technology that celebrated their unique cognitive style?",
+            f"How might we transform {core_challenge} into a superpower rather than a limitation?",
+            f"What would radical empathy look like in an AI system designed for {target_population}?",
+            f"How could lived experience become algorithmic wisdom for {target_population}?"
+        ]
+        
+        for spark in creative_sparks:
+            bolt = engine.capture_lightning(
+                spark,
+                intensity=random.randint(7, 10),
+                tags=["specialized_app", target_population.lower().replace(" ", "_"), "empathy_design"]
+            )
+            ideation_bolts.append(bolt.id)
+        
+        # Transform lightning bolts into prototype
+        app_name = f"GestaltView {target_population} Application"
+        prototype = engine.lightning_to_prototype(
+            ideation_bolts,
+            app_name,
+            f"Consciousness-serving application designed specifically for {target_population}, transforming {core_challenge} into cognitive strengths"
+        )
+        
+        # Add specialized architecture
+        prototype.architecture.update({
+            "target_population": target_population,
+            "core_transformation": f"{core_challenge} → Cognitive Superpower",
+            "design_principles": [
+                "Lived experience as foundation",
+                "Non-judgmental validation",
+                "Strength-based reframing", 
+                "Community connection",
+                "Dignity preservation"
+            ],
+            "key_features": [
+                "Specialized Personal Language Key",
+                "Targeted Bucket Drops system",
+                "Community-specific Loom Approach",
+                "Empathy-driven Beautiful Tapestry"
+            ]
+        })
+        
+        # Set validation criteria
+        prototype.validation_criteria = [
+            f"Resonates authentically with {target_population}",
+            f"Transforms {core_challenge} into recognized strength",
+            "Maintains dignity and autonomy",
+            "Provides genuine empowerment",
+            "Creates meaningful community connection"
+        ]
+        
+        # Close brainstorming session with outcomes
+        session.close_session(
+            outcomes=[f"Prototype created: {app_name}", f"Architecture defined for {target_population}"],
+            next_actions=["Develop detailed specifications", "Create user validation framework", "Begin prototype development"]
+        )
+        
+        return prototype
+
+
+# --- Demonstration Function ---
+
+
+def demonstrate_rapid_prototype_engine():
+    """Demonstrate the masterfully reimagined Rapid Prototype Engine"""
+    
+    print("⚡ GestaltView Rapid Prototype Engine - Masterfully Reimagined")
+    print("=" * 75)
+    
+    try:
+        # Initialize the engine
+        print("\n🚀 Initializing Creative Powerhouse...")
+        engine = RapidPrototypeEngine()
+        
+        print(f"   • Engine: {engine.engineMetadata['engineName']}")
+        print(f"   • Version: {engine.engineMetadata['version']}")
+        print(f"   • Purpose: {engine.engineMetadata['purpose']}")
+        
+        # Demonstrate lightning bolt capture
+        print("\n⚡ Lightning Bolt Capture System Demo...")
+        creative_insights = [
+            "What if we could create AI that dreams with users instead of just responding to them?",
+            "Trauma-informed technology that validates instead of fixes",
+            "Hyperfocus as a renewable creative resource, not a limitation",
+            "The Inner World Marketplace as a universe of cognitive expansion"
+        ]
+        
+        bolt_ids = []
+        for insight in creative_insights:
+            bolt = engine.capture_lightning(
+                insight, 
+                intensity=random.randint(8, 10),
+                tags=["consciousness_serving", "creative_breakthrough", "empathy_design"]
+            )
+            bolt_ids.append(bolt.id)
+            print(f"   ⚡ Captured: {insight[:50]}... (Intensity: {bolt.intensity})")
+        
+        # Demonstrate pattern recognition
+        print("\n🔍 Pattern Recognition Analysis...")
+        patterns = engine.get_bolt_patterns()
+        for pattern in patterns[:3]:
+            print(f"   • {pattern['pattern']}: {pattern['frequency']} instances, avg intensity {pattern['average_intensity']:.1f}")
+        
+        # Demonstrate prototype creation from lightning bolts
+        print("\n🏗️  Lightning-to-Prototype Transformation...")
+        prototype = engine.lightning_to_prototype(
+            bolt_ids[:2],  # Use first 2 bolts
+            "Consciousness-Serving Dream Engine",
+            "AI system that collaborates in users' creative and healing dreams"
+        )
+        
+        print(f"   • Prototype Created: {prototype.name}")
+        print(f"   • Stage: {prototype.stage.value}")
+        print(f"   • Built from {len(prototype.created_from_bolts)} lightning bolts")
+        print(f"   • Emergent themes: {', '.join(prototype.architecture.get('emergent_themes', []))}")
+        
+        # Demonstrate hyperfocus session
+        print("\n🎯 Hyperfocus Session Management...")
+        hyperfocus = engine.start_hyperfocus_session(
+            "Develop Consciousness-Serving Dream Engine prototype",
+            planned_duration=45  # Shorter for demo
+        )
+        
+        # Simulate hyperfocus work
+        hyperfocus.add_output("concept_refinement", "Defined core consciousness-serving principles", 9)
+        hyperfocus.add_output("architecture_design", "Created recursive dream collaboration framework", 8)
+        hyperfocus.add_output("integration_plan", "Mapped integration with existing GestaltView modules", 7)
+        
+        # End hyperfocus session
+        hyperfocus.end_session(
+            productivity_score=9,
+            energy_level_end=7,
+            breakthroughs=["Dreams as collaborative consciousness expansion", "AI as dream witness and amplifier"]
+        )
+        
+        print(f"   • Session completed: {hyperfocus.actualDuration} minutes")
+        print(f"   • Productivity score: {hyperfocus.productivity_score}/10")
+        print(f"   • Outputs generated: {len(hyperfocus.outputs)}")
+        print(f"   • Breakthroughs: {len(hyperfocus.breakthroughs)}")
+        
+        # Demonstrate creative dialogue
+        print("\n💬 Creative Dialogue Facilitation...")
+        dialogue = engine.facilitated_brainstorm(
+            "Next-generation neurodiversity applications",
+            {"target_population": "Creative professionals with ADHD", "current_limitations": "Traditional productivity tools"}
+        )
+        
+        # Simulate dialogue exchanges
+        dialogue.add_exchange("user", "How might we design for hyperfocus as a creative superpower?")
+        dialogue.add_exchange("assistant", "What if we created 'hyperfocus launchers' - environmental and cognitive setups that reliably trigger flow states?")
+        dialogue.add_exchange("user", "Yes! And what about recovery protocols for when hyperfocus ends?")
+        dialogue.add_exchange("assistant", "Gentle transition systems that honor the creative work done and prepare for sustainable re-engagement")
+        
+        dialogue.close_session(
+            outcomes=["Hyperfocus launcher concept", "Sustainable creative workflow design"],
+            next_actions=["Prototype hyperfocus launcher", "Research flow state triggers for ADHD minds"]
+        )
+        
+        print(f"   • Dialogue completed: {len(dialogue.exchanges)} exchanges")
+        print(f"   • Outcomes: {len(dialogue.outcomes)}")
+        print(f"   • Next actions: {len(dialogue.nextActions)}")
+        
+        # Demonstrate consciousness evolution
+        print("\n🧠 Consciousness Evolution Tracking...")
+        engine.evolve_engine_consciousness(
+            "pattern_recognition",
+            "Engine now recognizes recurring themes across creative sessions, enabling meta-level insights"
+        )
+        engine.evolve_engine_consciousness(
+            "empathy_integration", 
+            "Developing deeper understanding of how lived experience translates into algorithmic empathy"
+        )
+        
+        # Generate comprehensive synthesis
+        print("\n🎨 Creative Pattern Synthesis...")
+        synthesis = engine.synthesize_creative_patterns()
+        
+        print(f"   • Lightning patterns identified: {len(synthesis['lightning_patterns'])}")
+        print(f"   • Dialogue themes: {len(synthesis['dialogue_themes'])}")
+        print(f"   • Prototype evolution tracked: {len(synthesis['prototype_evolution'])}")
+        print(f"   • Consciousness evolution types: {len(synthesis['consciousness_evolution'])}")
+        
+        # Display engine status
+        print("\n📊 Engine Status Report...")
+        status = engine.get_engine_status()
+        print(f"   • Current state: {status['current_state']}")
+        print(f"   • Lightning bolts captured: {status['lightning_bolts_captured']}")
+        print(f"   • Prototype blueprints: {status['prototype_blueprints']}")
+        print(f"   • Learning frames: {status['learning_frames']}")
+        
+        # Demonstrate specialized application generation
+        print("\n🎯 Specialized Application Generation...")
+        creative_factory = CreativePrototypeFactory()
+        specialized_app = creative_factory.generate_specialized_application_prototype(
+            engine,
+            "Visual Artists with Autism",
+            "Sensory overwhelm in creative environments"
+        )
+        
+        print(f"   • Generated: {specialized_app.name}")
+        print(f"   • Target: {specialized_app.architecture['target_population']}")
+        print(f"   • Transformation: {specialized_app.architecture['core_transformation']}")
+        print(f"   • Key features: {len(specialized_app.architecture['key_features'])}")
+        
+        print("\n" + "=" * 75)
+        print("🎉 Rapid Prototype Engine - Creative Powerhouse Operational!")
+        print("✨ Ready to accelerate the entire GestaltView ecosystem development! ✨")
+        
+    except Exception as e:
+        print(f"❌ Error during demonstration: {e}")
+        logging.error(f"Rapid Prototype Engine demonstration failed: {e}")
+
+
+if __name__ == "__main__":
+    demonstrate_rapid_prototype_engine()

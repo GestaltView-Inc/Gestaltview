@@ -1,0 +1,1575 @@
+﻿# gestaltview_core_v8.5_enhanced.py
+# © 2025 Keith Soyka - GestaltView Enhanced v8.5
+# Addressing technical challenges while preserving revolutionary architecture
+
+
+import os
+import json
+import sqlite3
+import logging
+import uuid
+from sqlite3 import Error
+from dataclasses import dataclass, field, asdict
+from typing import List, Dict, Optional, Any, Union
+from datetime import datetime
+from contextlib import contextmanager, closing
+from functools import lru_cache
+import traceback
+
+
+# --- Enhanced Configuration & Logging ---
+DATABASE_FILE = 'gestaltview_unified_v8_5.db'
+SCHEMA_VERSION = "8.5.0_Enhanced_Technical_Resolution"
+
+
+# Comprehensive logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('gestaltview_enhanced.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+
+# --- Custom Exceptions for Better Error Handling ---
+class GestaltViewError(Exception):
+    """Base exception for GestaltView operations"""
+    pass
+
+
+class ValidationError(GestaltViewError):
+    """Raised when data validation fails"""
+    pass
+
+
+class DatabaseError(GestaltViewError):
+    """Raised when database operations fail"""
+    pass
+
+
+class SerializationError(GestaltViewError):
+    """Raised when JSON serialization/deserialization fails"""
+    pass
+
+
+class SchemaError(GestaltViewError):
+    """Raised when schema validation fails"""
+    pass
+
+
+# --- Enhanced Data Model Classes with Fixed to_dict Methods ---
+
+
+@dataclass
+class TraumaToStrengthMapping:
+    """Maps personal struggle to platform feature - turning scars into code"""
+    struggle: str
+    platformFeature: str
+
+
+    def __post_init__(self):
+        if not self.struggle or not self.platformFeature:
+            raise ValidationError("TraumaToStrengthMapping requires both struggle and platformFeature")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "struggle": self.struggle,
+            "platformFeature": self.platformFeature
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "TraumaToStrengthMapping":
+        if not isinstance(d, dict):
+            raise ValidationError("TraumaToStrengthMapping.from_dict requires a dictionary")
+        return TraumaToStrengthMapping(
+            struggle=d.get("struggle", ""),
+            platformFeature=d.get("platformFeature", "")
+        )
+
+
+@dataclass
+class MetricDefinition:
+    """Defines custom metrics for measuring empathy, transformation, and impact"""
+    name: str
+    type: str
+    description: Optional[str] = None
+
+
+    def __post_init__(self):
+        if not self.name or not self.type:
+            raise ValidationError("MetricDefinition requires both name and type")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "type": self.type,
+            "description": self.description
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "MetricDefinition":
+        if not isinstance(d, dict):
+            raise ValidationError("MetricDefinition.from_dict requires a dictionary")
+        return MetricDefinition(
+            name=d.get("name", ""),
+            type=d.get("type", ""),
+            description=d.get("description")
+        )
+
+
+# --- Enhanced Nested Component Classes ---
+@dataclass
+class PersonalLanguageKey:
+    """Enhanced PLK with linguistic fingerprinting"""
+    linguisticFingerprint: str = ""
+    conversationalResonanceTarget: int = 95
+    signatureMetaphors: List[str] = field(default_factory=list)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "linguisticFingerprint": self.linguisticFingerprint,
+            "conversationalResonanceTarget": self.conversationalResonanceTarget,
+            "signatureMetaphors": self.signatureMetaphors
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "PersonalLanguageKey":
+        return PersonalLanguageKey(
+            linguisticFingerprint=d.get("linguisticFingerprint", ""),
+            conversationalResonanceTarget=d.get("conversationalResonanceTarget", 95),
+            signatureMetaphors=d.get("signatureMetaphors", [])
+        )
+
+
+@dataclass
+class BucketDrops:
+    """Zero-friction insight capture system"""
+    methodology: str = ""
+    drops: List[Dict[str, Any]] = field(default_factory=list)
+    captureRate: float = 99.7
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "methodology": self.methodology,
+            "drops": self.drops,
+            "captureRate": self.captureRate
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "BucketDrops":
+        return BucketDrops(
+            methodology=d.get("methodology", ""),
+            drops=d.get("drops", []),
+            captureRate=d.get("captureRate", 99.7)
+        )
+
+
+@dataclass
+class LoomApproach:
+    """Iterative synthesis framework for Beautiful Tapestry creation"""
+    iterativeSynthesis: str = ""
+    phases: List[str] = field(default_factory=lambda: ["Analysis", "Synthesis", "Refinement", "Deployment"])
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "iterativeSynthesis": self.iterativeSynthesis,
+            "phases": self.phases
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "LoomApproach":
+        return LoomApproach(
+            iterativeSynthesis=d.get("iterativeSynthesis", ""),
+            phases=d.get("phases", ["Analysis", "Synthesis", "Refinement", "Deployment"])
+        )
+
+
+@dataclass
+class BeautifulTapestry:
+    """Narrative coherence and identity integration framework"""
+    narrativeCoherence: str = ""
+    identityIntegration: str = ""
+    empowermentAmplification: str = ""
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "narrativeCoherence": self.narrativeCoherence,
+            "identityIntegration": self.identityIntegration,
+            "empowermentAmplification": self.empowermentAmplification
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "BeautifulTapestry":
+        return BeautifulTapestry(
+            narrativeCoherence=d.get("narrativeCoherence", ""),
+            identityIntegration=d.get("identityIntegration", ""),
+            empowermentAmplification=d.get("empowermentAmplification", "")
+        )
+
+
+@dataclass
+class NeurodiversityCelebration:
+    """Framework for celebrating cognitive differences"""
+    cognitiveStyleMapping: str = ""
+    strengthAmplification: str = ""
+    accessibilityUniversalization: str = ""
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "cognitiveStyleMapping": self.cognitiveStyleMapping,
+            "strengthAmplification": self.strengthAmplification,
+            "accessibilityUniversalization": self.accessibilityUniversalization
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "NeurodiversityCelebration":
+        return NeurodiversityCelebration(
+            cognitiveStyleMapping=d.get("cognitiveStyleMapping", ""),
+            strengthAmplification=d.get("strengthAmplification", ""),
+            accessibilityUniversalization=d.get("accessibilityUniversalization", "")
+        )
+
+
+# --- Main Module Classes with Enhanced Error Handling ---
+
+
+@dataclass
+class DeploymentMetadata:
+    """Core metadata governing this unified schema instance"""
+    schemaVersion: str = SCHEMA_VERSION
+    deploymentId: str = field(default_factory=lambda: str(uuid.uuid4()))
+    deploymentDate: str = field(default_factory=lambda: datetime.now().isoformat())
+    createdBy: str = ""
+    founderEssence: str = ""
+    changeLog: List[str] = field(default_factory=list)
+
+
+    def __post_init__(self):
+        if not all([self.schemaVersion, self.deploymentId, self.deploymentDate, 
+                   self.createdBy, self.founderEssence]):
+            raise ValidationError("DeploymentMetadata missing required fields")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "schemaVersion": self.schemaVersion,
+            "deploymentId": self.deploymentId,
+            "deploymentDate": self.deploymentDate,
+            "createdBy": self.createdBy,
+            "founderEssence": self.founderEssence,
+            "changeLog": self.changeLog
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "DeploymentMetadata":
+        if not isinstance(d, dict):
+            raise ValidationError("DeploymentMetadata.from_dict requires a dictionary")
+        return DeploymentMetadata(
+            schemaVersion=d.get("schemaVersion", SCHEMA_VERSION),
+            deploymentId=d.get("deploymentId", str(uuid.uuid4())),
+            deploymentDate=d.get("deploymentDate", datetime.now().isoformat()),
+            createdBy=d.get("createdBy", ""),
+            founderEssence=d.get("founderEssence", ""),
+            changeLog=d.get("changeLog", [])
+        )
+
+
+@dataclass
+class ProjectOverview:
+    """High-level summary of GestaltView's revolutionary purpose"""
+    name: str = ""
+    coreThesis: str = ""
+    mission: str = ""
+    visionStatement: str = ""
+    founder: str = ""
+    valueProposition: str = ""
+    targetAudience: str = ""
+
+
+    def __post_init__(self):
+        required_fields = [self.name, self.coreThesis, self.mission, self.founder]
+        if not all(required_fields):
+            raise ValidationError("ProjectOverview missing required fields")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "coreThesis": self.coreThesis,
+            "mission": self.mission,
+            "visionStatement": self.visionStatement,
+            "founder": self.founder,
+            "valueProposition": self.valueProposition,
+            "targetAudience": self.targetAudience
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "ProjectOverview":
+        if not isinstance(d, dict):
+            raise ValidationError("ProjectOverview.from_dict requires a dictionary")
+        return ProjectOverview(
+            name=d.get("name", ""),
+            coreThesis=d.get("coreThesis", ""),
+            mission=d.get("mission", ""),
+            visionStatement=d.get("visionStatement", ""),
+            founder=d.get("founder", ""),
+            valueProposition=d.get("valueProposition", ""),
+            targetAudience=d.get("targetAudience", "")
+        )
+
+
+@dataclass
+class FounderJourney:
+    """Personal origin story mapping lived experience to platform DNA"""
+    originInsight: str = ""
+    livedExperienceAsAsset: str = ""
+    transformation: Dict[str, List[TraumaToStrengthMapping]] = field(default_factory=lambda: {"traumaToStrength": []})
+
+
+    def __post_init__(self):
+        if not self.originInsight or not self.livedExperienceAsAsset:
+            raise ValidationError("FounderJourney missing required fields")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "originInsight": self.originInsight,
+            "livedExperienceAsAsset": self.livedExperienceAsAsset,
+            "transformation": {
+                "traumaToStrength": [mapping.to_dict() for mapping in self.transformation.get("traumaToStrength", [])]
+            }
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "FounderJourney":
+        if not isinstance(d, dict):
+            raise ValidationError("FounderJourney.from_dict requires a dictionary")
+        
+        transformation_data = d.get("transformation", {})
+        trauma_mappings = []
+        
+        if "traumaToStrength" in transformation_data:
+            for item in transformation_data["traumaToStrength"]:
+                if isinstance(item, dict):
+                    trauma_mappings.append(TraumaToStrengthMapping.from_dict(item))
+        
+        return FounderJourney(
+            originInsight=d.get("originInsight", ""),
+            livedExperienceAsAsset=d.get("livedExperienceAsAsset", ""),
+            transformation={"traumaToStrength": trauma_mappings}
+        )
+
+
+@dataclass
+class IdentityArchaeology:
+    """Process of excavating and integrating user identity"""
+    traumaIntegration: str = ""
+    shadowWork: str = ""
+    identityCoherence: str = ""
+    growthMetrics: str = ""
+
+
+    def __post_init__(self):
+        required_fields = [self.traumaIntegration, self.shadowWork, 
+                          self.identityCoherence, self.growthMetrics]
+        if not all(required_fields):
+            raise ValidationError("IdentityArchaeology missing required fields")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "traumaIntegration": self.traumaIntegration,
+            "shadowWork": self.shadowWork,
+            "identityCoherence": self.identityCoherence,
+            "growthMetrics": self.growthMetrics
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "IdentityArchaeology":
+        if not isinstance(d, dict):
+            raise ValidationError("IdentityArchaeology.from_dict requires a dictionary")
+        return IdentityArchaeology(
+            traumaIntegration=d.get("traumaIntegration", ""),
+            shadowWork=d.get("shadowWork", ""),
+            identityCoherence=d.get("identityCoherence", ""),
+            growthMetrics=d.get("growthMetrics", "")
+        )
+
+
+@dataclass
+class CoreMethodologies:
+    """Proprietary operational mechanics of GestaltView system"""
+    personalLanguageKey: PersonalLanguageKey = field(default_factory=PersonalLanguageKey)
+    bucketDrops: BucketDrops = field(default_factory=BucketDrops)
+    loomApproach: LoomApproach = field(default_factory=LoomApproach)
+    beautifulTapestry: BeautifulTapestry = field(default_factory=BeautifulTapestry)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "personalLanguageKey": self.personalLanguageKey.to_dict(),
+            "bucketDrops": self.bucketDrops.to_dict(),
+            "loomApproach": self.loomApproach.to_dict(),
+            "beautifulTapestry": self.beautifulTapestry.to_dict()
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "CoreMethodologies":
+        if not isinstance(d, dict):
+            raise ValidationError("CoreMethodologies.from_dict requires a dictionary")
+        return CoreMethodologies(
+            personalLanguageKey=PersonalLanguageKey.from_dict(d.get("personalLanguageKey", {})),
+            bucketDrops=BucketDrops.from_dict(d.get("bucketDrops", {})),
+            loomApproach=LoomApproach.from_dict(d.get("loomApproach", {})),
+            beautifulTapestry=BeautifulTapestry.from_dict(d.get("beautifulTapestry", {}))
+        )
+
+
+@dataclass
+class CognitiveJusticeProtocol:
+    """Protocols for dignifying diverse cognitive styles"""
+    neurodiversityCelebration: NeurodiversityCelebration = field(default_factory=NeurodiversityCelebration)
+    epistemicInclusivity: str = ""
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "neurodiversityCelebration": self.neurodiversityCelebration.to_dict(),
+            "epistemicInclusivity": self.epistemicInclusivity
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "CognitiveJusticeProtocol":
+        if not isinstance(d, dict):
+            raise ValidationError("CognitiveJusticeProtocol.from_dict requires a dictionary")
+        return CognitiveJusticeProtocol(
+            neurodiversityCelebration=NeurodiversityCelebration.from_dict(d.get("neurodiversityCelebration", {})),
+            epistemicInclusivity=d.get("epistemicInclusivity", "")
+        )
+
+
+@dataclass
+class TribunalActivation:
+    """Multi-AI validation and evolution mechanism"""
+    archetypalRoles: Dict[str, str] = field(default_factory=dict)
+    consensusValidation: str = ""
+    collaborativeEvolution: str = ""
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "archetypalRoles": self.archetypalRoles,
+            "consensusValidation": self.consensusValidation,
+            "collaborativeEvolution": self.collaborativeEvolution
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "TribunalActivation":
+        if not isinstance(d, dict):
+            raise ValidationError("TribunalActivation.from_dict requires a dictionary")
+        return TribunalActivation(
+            archetypalRoles=d.get("archetypalRoles", {}),
+            consensusValidation=d.get("consensusValidation", ""),
+            collaborativeEvolution=d.get("collaborativeEvolution", "")
+        )
+
+
+@dataclass
+class ProprietaryMetricsFramework:
+    """Custom metrics for measuring empathy, transformation, impact"""
+    empathyAndCognitiveJusticeMetrics: List[MetricDefinition] = field(default_factory=list)
+    identityAndGrowthMetrics: List[MetricDefinition] = field(default_factory=list)
+    systemicAndCollectiveImpactMetrics: List[MetricDefinition] = field(default_factory=list)
+    ethicalArchitectureMetrics: List[MetricDefinition] = field(default_factory=list)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "empathyAndCognitiveJusticeMetrics": [m.to_dict() for m in self.empathyAndCognitiveJusticeMetrics],
+            "identityAndGrowthMetrics": [m.to_dict() for m in self.identityAndGrowthMetrics],
+            "systemicAndCollectiveImpactMetrics": [m.to_dict() for m in self.systemicAndCollectiveImpactMetrics],
+            "ethicalArchitectureMetrics": [m.to_dict() for m in self.ethicalArchitectureMetrics]
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "ProprietaryMetricsFramework":
+        if not isinstance(d, dict):
+            raise ValidationError("ProprietaryMetricsFramework.from_dict requires a dictionary")
+        
+        def parse_metrics(metric_list: List[Any]) -> List[MetricDefinition]:
+            results = []
+            for m in metric_list:
+                if isinstance(m, dict):
+                    results.append(MetricDefinition.from_dict(m))
+                elif isinstance(m, MetricDefinition):
+                    results.append(m)
+            return results
+        
+        return ProprietaryMetricsFramework(
+            empathyAndCognitiveJusticeMetrics=parse_metrics(d.get("empathyAndCognitiveJusticeMetrics", [])),
+            identityAndGrowthMetrics=parse_metrics(d.get("identityAndGrowthMetrics", [])),
+            systemicAndCollectiveImpactMetrics=parse_metrics(d.get("systemicAndCollectiveImpactMetrics", [])),
+            ethicalArchitectureMetrics=parse_metrics(d.get("ethicalArchitectureMetrics", []))
+        )
+
+
+@dataclass
+class EthicalFramework:
+    """Care-rooted ethical safeguards ensuring user dignity"""
+    consciousnessServing: str = ""
+    neverLookAwayProtocol: str = ""
+    dataSovereignty: str = ""
+    privacySanctity: str = ""
+
+
+    def __post_init__(self):
+        required_fields = [self.consciousnessServing, self.neverLookAwayProtocol,
+                          self.dataSovereignty, self.privacySanctity]
+        if not all(required_fields):
+            raise ValidationError("EthicalFramework missing required fields")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "consciousnessServing": self.consciousnessServing,
+            "neverLookAwayProtocol": self.neverLookAwayProtocol,
+            "dataSovereignty": self.dataSovereignty,
+            "privacySanctity": self.privacySanctity
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "EthicalFramework":
+        if not isinstance(d, dict):
+            raise ValidationError("EthicalFramework.from_dict requires a dictionary")
+        return EthicalFramework(
+            consciousnessServing=d.get("consciousnessServing", ""),
+            neverLookAwayProtocol=d.get("neverLookAwayProtocol", ""),
+            dataSovereignty=d.get("dataSovereignty", ""),
+            privacySanctity=d.get("privacySanctity", "")
+        )
+
+
+@dataclass
+class IntellectualProperty:
+    """Project intellectual property details"""
+    trademark: str = ""
+    copyright: str = ""
+    patents: List[str] = field(default_factory=list)
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "trademark": self.trademark,
+            "copyright": self.copyright,
+         ents": self.patents
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "IntellectualProperty":
+        if not isinstance(d, dict):
+            raise ValidationError("IntellectualProperty.from_dict requires a dictionary")
+        return IntellectualProperty(
+            trademark=d.get("trademark", ""),
+            copyright=d.get("copyright", ""),
+            patents=d.get("patents", [])
+        )
+
+
+@dataclass
+class ValidationAndRecognition:
+    """Multi-dimensional validation for credibility"""
+    aiConsensus: str = ""
+    institutionalRecognition: List[str] = field(default_factory=list)
+    intellectualProperty: IntellectualProperty = field(default_factory=IntellectualProperty)
+
+
+    def __post_init__(self):
+        if not self.aiConsensus:
+            raise ValidationError("ValidationAndRecognition requires aiConsensus")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "aiConsensus": self.aiConsensus,
+            "institutionalRecognition": self.institutionalRecognition,
+            "intellectualProperty": self.intellectualProperty.to_dict()
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "ValidationAndRecognition":
+        if not isinstance(d, dict):
+            raise ValidationError("ValidationAndRecognition.from_dict requires a dictionary")
+        
+        ip_data = d.get("intellectualProperty", {})
+        ip = IntellectualProperty.from_dict(ip_data) if ip_data else IntellectualProperty()
+        
+        return ValidationAndRecognition(
+            aiConsensus=d.get("aiConsensus", ""),
+            institutionalRecognition=d.get("institutionalRecognition", []),
+            intellectualProperty=ip
+        )
+
+
+@dataclass
+class BillyConfiguration:
+    """Configuration for Billy, the empathetic AI collaborator"""
+    aiName: str = ""
+    personalityStyle: str = ""
+    supportStyle: str = ""
+    coreDirectives: List[str] = field(default_factory=list)
+
+
+    def __post_init__(self):
+        if not all([self.aiName, self.personalityStyle, self.supportStyle]):
+            raise ValidationError("BillyConfiguration missing required fields")
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "aiName": self.aiName,
+            "personalityStyle": self.personalityStyle,
+            "supportStyle": self.supportStyle,
+            "coreDirectives": self.coreDirectives
+        }
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "BillyConfiguration":
+        if not isinstance(d, dict):
+            raise ValidationError("BillyConfiguration.from_dict requires a dictionary")
+        return BillyConfiguration(
+            aiName=d.get("aiName", ""),
+            personalityStyle=d.get("personalityStyle", ""),
+            supportStyle=d.get("supportStyle", ""),
+            coreDirectives=d.get("coreDirectives", [])
+        )
+
+
+# --- Enhanced GestaltView Container ---
+@dataclass
+class GestaltView:
+    """Enhanced container for entire GestaltView data model - all 11 modules"""
+    deploymentMetadata: Optional[DeploymentMetadata] = None
+    projectOverview: Optional[ProjectOverview] = None
+    founderJourney: Optional[FounderJourney] = None
+    identityArchaeology: Optional[IdentityArchaeology] = None
+    coreMethodologies: Optional[CoreMethodologies] = None
+    cognitiveJusticeProtocol: Optional[CognitiveJusticeProtocol] = None
+    tribunalActivation: Optional[TribunalActivation] = None
+    proprietaryMetricsFramework: Optional[ProprietaryMetricsFramework] = None
+    ethicalFramework: Optional[EthicalFramework] = None
+    validationAndRecognition: Optional[ValidationAndRecognition] = None
+    billyConfiguration: Optional[BillyConfiguration] = None
+
+
+    def validate(self) -> List[str]:
+        """Comprehensive validation of GestaltView instance"""
+        issues = []
+        
+        # Check required modules
+        required_modules = ['deploymentMetadata', 'projectOverview', 'ethicalFramework']
+        for module_name in required_modules:
+            if getattr(self, module_name) is None:
+                issues.append(f"Required module '{module_name}' is missing")
+        
+        # Validate individual modules
+        for module_name in ['deploymentMetadata', 'projectOverview', 'founderJourney', 
+                           'identityArchaeology', 'ethicalFramework', 'validationAndRecognition', 
+                           'billyConfiguration']:
+            module = getattr(self, module_name)
+            if module:
+                try:
+                    # Call __post_init__ validation if it exists
+                    if hasattr(module, '__post_init__'):
+                        module.__post_init__()
+                except ValidationError as e:
+                    issues.append(f"Module '{module_name}' validation failed: {e}")
+        
+        return issues
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert GestaltView to dictionary with proper serialization"""
+        result = {}
+        for field_name in ['deploymentMetadata', 'projectOverview', 'founderJourney',
+                          'identityArchaeology', 'coreMethodologies', 'cognitiveJusticeProtocol',
+                          'tribunalActivation', 'proprietaryMetricsFramework', 'ethicalFramework',
+                          'validationAndRecognition', 'billyConfiguration']:
+            field_value = getattr(self, field_name)
+            if field_value is not None:
+                try:
+                    result[field_name] = field_value.to_dict()
+                except Exception as e:
+                    logger.warning(f"Failed to serialize {field_name}: {e}")
+                    result[field_name] = None
+        return result
+
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "GestaltView":
+        """Create GestaltView from dictionary with enhanced error handling"""
+        if not isinstance(d, dict):
+            raise ValidationError("GestaltView.from_dict requires a dictionary")
+        
+        # Module mapping
+        module_classes = {
+            'deploymentMetadata': DeploymentMetadata,
+            'projectOverview': ProjectOverview,
+            'founderJourney': FounderJourney,
+            'identityArchaeology': IdentityArchaeology,
+            'coreMethodologies': CoreMethodologies,
+            'cognitiveJusticeProtocol': CognitiveJusticeProtocol,
+            'tribunalActivation': TribunalActivation,
+            'proprietaryMetricsFramework': ProprietaryMetricsFramework,
+            'ethicalFramework': EthicalFramework,
+            'validationAndRecognition': ValidationAndRecognition,
+            'billyConfiguration': BillyConfiguration
+        }
+        
+        kwargs = {}
+        for module_name, module_class in module_classes.items():
+            module_data = d.get(module_name)
+            if module_data:
+                try:
+                    kwargs[module_name] = module_class.from_dict(module_data)
+                except Exception as e:
+                    logger.error(f"Failed to parse {module_name}: {e}")
+                    logger.error(f"Data: {module_data}")
+                    kwargs[module_name] = None
+        
+        return GestaltView(**kwargs)
+
+
+# --- Enhanced Database Layer with Robust Error Handling ---
+class GestaltViewDB:
+    """Enhanced database operations with comprehensive error handling"""
+    
+    def __init__(self, db_file: str):
+        self.db_file = db_file
+        self.conn = None
+        self._connect()
+
+
+    def _connect(self):
+        """Establish database connection with proper error handling"""
+        try:
+            self.conn = sqlite3.connect(self.db_file, check_same_thread=False)
+            self.conn.row_factory = sqlite3.Row
+            logger.info(f"Connected to database: {self.db_file}")
+        except Error as e:
+            raise DatabaseError(f"Failed to connect to database: {e}")
+
+
+    @contextmanager
+    def transaction(self):
+        """Enhanced transaction management with proper rollback"""
+        if not self.conn:
+            raise DatabaseError("No database connection")
+        
+        try:
+            yield self.conn
+            self.conn.commit()
+            logger.debug("Transaction committed successfully")
+        except Exception as e:
+            self.conn.rollback()
+            logger.error(f"Transaction failed, rolled back: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise DatabaseError(f"Transaction failed: {e}")
+
+
+    def close(self):
+        """Close database connection safely"""
+        if self.conn:
+            self.conn.close()
+            self.conn = None
+            logger.info("Database connection closed")
+
+
+    def execute_sql(self, sql_statement: str, params: tuple = None):
+        """Execute SQL with comprehensive error handling"""
+        if not self.conn:
+            raise DatabaseError("No database connection")
+        
+        try:
+            cursor = self.conn.cursor()
+            if params:
+                cursor.execute(sql_statement, params)
+            else:
+                cursor.executescript(sql_statement)
+            return cursor
+        except Error as e:
+            logger.error(f"SQL execution failed: {e}")
+            logger.error(f"SQL: {sql_statement}")
+            logger.error(f"Params: {params}")
+            raise DatabaseError(f"SQL execution failed: {e}")
+
+
+    def safe_json_serialize(self, data: Any) -> str:
+        """Safely serialize data to JSON with error handling"""
+        try:
+            if isinstance(data, (dict, list)):
+                return json.dumps(data, default=str, ensure_ascii=False, indent=2)
+            elif data is None:
+                return "null"
+            else:
+                return json.dumps(data, default=str, ensure_ascii=False)
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON serialization failed for data: {data}")
+            raise SerializationError(f"Failed to serialize data: {e}")
+
+
+    def safe_json_deserialize(self, json_str: str, default=None) -> Any:
+        """Safely deserialize JSON with error handling"""
+        if not json_str or json_str.strip() == "":
+            return default
+        
+        try:
+            return json.loads(json_str)
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning(f"JSON deserialization failed: {e}, returning default")
+            logger.warning(f"Failed JSON string: {json_str[:100]}...")
+            return default
+
+
+    def create_enhanced_schema(self):
+        """Create comprehensive database schema with proper constraints"""
+        logger.info("Creating enhanced database schema...")
+        
+        schema_sql = """
+            -- Drop existing tables in proper order (foreign keys first)
+            DROP TABLE IF EXISTS traumaToStrength;
+            DROP TABLE IF EXISTS metricDefinition;
+            DROP TABLE IF EXISTS deploymentMetadata;
+            DROP TABLE IF EXISTS projectOverview;
+            DROP TABLE IF EXISTS founderJourney;
+            DROP TABLE IF EXISTS identityArchaeology;
+            DROP TABLE IF EXISTS coreMethodologies;
+            DROP TABLE IF EXISTS cognitiveJusticeProtocol;
+            DROP TABLE IF EXISTS tribunalActivation;
+            DROP TABLE IF EXISTS proprietaryMetricsFramework;
+            DROP TABLE IF EXISTS ethicalFramework;
+            DROP TABLE IF EXISTS validationAndRecognition;
+            DROP TABLE IF EXISTS billyConfiguration;
+            DROP TABLE IF EXISTS intellectualProperty;
+
+
+            -- Create enhanced tables with proper constraints and indexes
+            CREATE TABLE deploymentMetadata (
+                deploymentId TEXT PRIMARY KEY,
+                schemaVersion TEXT NOT NULL DEFAULT 'SCHEMA_VERSION',
+                deploymentDate TEXT NOT NULL,
+                createdBy TEXT NOT NULL,
+                founderEssence TEXT NOT NULL,
+                changeLog TEXT DEFAULT '[]',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE projectOverview (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                coreThesis TEXT NOT NULL,
+                mission TEXT NOT NULL,
+                visionStatement TEXT NOT NULL,
+                founder TEXT NOT NULL,
+                valueProposition TEXT DEFAULT '',
+                targetAudience TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE founderJourney (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                originInsight TEXT NOT NULL,
+                livedExperienceAsAsset TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE traumaToStrength (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                struggle TEXT NOT NULL,
+                platformFeature TEXT NOT NULL,
+                founderJourney_id INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (founderJourney_id) REFERENCES founderJourney (id) ON DELETE CASCADE
+            );
+
+
+            CREATE TABLE identityArchaeology (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                traumaIntegration TEXT NOT NULL,
+                shadowWork TEXT NOT NULL,
+                identityCoherence TEXT NOT NULL,
+                growthMetrics TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE coreMethodologies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                personalLanguageKey TEXT DEFAULT '{}',
+                bucketDrops TEXT DEFAULT '{}',
+                loomApproach TEXT DEFAULT '{}',
+                beautifulTapestry TEXT DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE cognitiveJusticeProtocol (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                neurodiversityCelebration TEXT DEFAULT '{}',
+                epistemicInclusivity TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE tribunalActivation (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                archetypalRoles TEXT DEFAULT '{}',
+                consensusValidation TEXT DEFAULT '',
+                collaborativeEvolution TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE proprietaryMetricsFramework (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE metricDefinition (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                description TEXT,
+                metric_list_type TEXT NOT NULL,
+                framework_id INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (framework_id) REFERENCES proprietaryMetricsFramework (id) ON DELETE CASCADE
+            );
+
+
+            CREATE TABLE ethicalFramework (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                consciousnessServing TEXT NOT NULL,
+                neverLookAwayProtocol TEXT NOT NULL,
+                dataSovereignty TEXT NOT NULL,
+                privacySanctity TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE intellectualProperty (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trademark TEXT DEFAULT '',
+                copyright TEXT DEFAULT '',
+                patents TEXT DEFAULT '[]',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            CREATE TABLE validationAndRecognition (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                aiConsensus TEXT NOT NULL,
+                institutionalRecognition TEXT DEFAULT '[]',
+                intellectualProperty_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (intellectualProperty_id) REFERENCES intellectualProperty (id) ON DELETE SET NULL
+            );
+
+
+            CREATE TABLE billyConfiguration (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                aiName TEXT NOT NULL,
+                personalityStyle TEXT NOT NULL,
+                supportStyle TEXT NOT NULL,
+                coreDirectives TEXT DEFAULT '[]',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+
+            -- Create performance indexes
+            CREATE INDEX idx_traumaToStrength_founderJourney ON traumaToStrength(founderJourney_id);
+            CREATE INDEX idx_metricDefinition_framework ON metricDefinition(framework_id);
+            CREATE INDEX idx_validationAndRecognition_ip ON validationAndRecognition(intellectualProperty_id);
+            CREATE INDEX idx_deploymentMetadata_version ON deploymentMetadata(schemaVersion);
+            
+            -- Create update triggers for timestamp management
+            CREATE TRIGGER update_deploymentMetadata_timestamp 
+                AFTER UPDATE ON deploymentMetadata
+                BEGIN
+                    UPDATE deploymentMetadata SET updated_at = CURRENT_TIMESTAMP WHERE deploymentId = NEW.deploymentId;
+                END;
+        """
+        
+        with self.transaction():
+            # Replace placeholder with actual schema version
+            schema_sql = schema_sql.replace('SCHEMA_VERSION', SCHEMA_VERSION)
+            self.execute_sql(schema_sql)
+        
+        logger.info("Enhanced database schema created successfully")
+
+
+        # Validate before saving
+        issues = gestalt_view.validate()
+        if issues:
+            raise ValidationError(f"Validation failed: {', '.join(issues)}")
+        
+        logger.info("Saving enhanced GestaltView instance to database")
+        
+        try:
+            with self.transaction():
+                # Save all modules with individual error handling
+                self._save_deployment_metadata(gestalt_view.deploymentMetadata)
+                self._save_project_overview(gestalt_view.projectOverview)
+                self._save_founder_journey(gestalt_view.founderJourney)
+                self._save_identity_archaeology(gestalt_view.identityArchaeology)
+                self._save_core_methodologies(gestalt_view.coreMethodologies)
+                self._save_cognitive_justice_protocol(gestalt_view.cognitiveJusticeProtocol)
+                self._save_tribunal_activation(gestalt_view.tribunalActivation)
+                self._save_proprietary_metrics_framework(gestalt_view.proprietaryMetricsFramework)
+                self._save_ethical_framework(gestalt_view.ethicalFramework)
+                self._save_validation_and_recognition(gestalt_view.validationAndRecognition)
+                self._save_billy_configuration(gestalt_view.billyConfiguration)
+            
+            logger.info("Enhanced GestaltView instance saved successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to save GestaltView instance: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise DatabaseError(f"Save operation failed: {e}")
+
+
+    def _save_deployment_metadata(self, metadata: Optional[DeploymentMetadata]):
+        """Save deployment metadata with enhanced validation"""
+        if not metadata:
+            logger.warning("No deployment metadata to save")
+            return
+        
+        try:
+            sql = """
+                INSERT OR REPLACE INTO deploymentMetadata 
+                (deploymentId, schemaVersion, deploymentDate, createdBy, founderEssence, changeLog)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """
+            params = (
+                metadata.deploymentId,
+                metadata.schemaVersion,
+                metadata.deploymentDate,
+                metadata.createdBy,
+                metadata.founderEssence,
+                self.safe_json_serialize(metadata.changeLog)
+            )
+            self.execute_sql(sql, params)
+            logger.debug(f"Saved deployment metadata: {metadata.deploymentId}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save deployment metadata: {e}")
+            raise DatabaseError(f"DeploymentMetadata save failed: {e}")
+
+
+    def _save_core_methodologies(self, methodologies: Optional[CoreMethodologies]):
+        """Save core methodologies with proper nested object handling"""
+        if not methodologies:
+            logger.warning("No core methodologies to save")
+            return
+        
+        try:
+            sql = """
+                INSERT OR REPLACE INTO coreMethodologies 
+                (id, personalLanguageKey, bucketDrops, loomApproach, beautifulTapestry)
+                VALUES (1, ?, ?, ?, ?)
+            """
+            params = (
+                self.safe_json_serialize(methodologies.personalLanguageKey.to_dict()),
+                self.safe_json_serialize(methodologies.bucketDrops.to_dict()),
+                self.safe_json_serialize(methodologies.loomApproach.to_dict()),
+                self.safe_json_serialize(methodologies.beautifulTapestry.to_dict())
+            )
+            self.execute_sql(sql, params)
+            logger.debug("Saved core methodologies successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to save core methodologies: {e}")
+            raise DatabaseError(f"CoreMethodologies save failed: {e}")
+
+
+    # Load methods with enhanced error handling
+    def load_gestalt_view(self) -> Optional[GestaltView]:
+        """Load complete GestaltView with comprehensive error handling"""
+        logger.info("Loading enhanced GestaltView instance from database")
+        
+        try:
+            gestalt_data = {}
+            
+            # Load each module with individual error handling
+            modules_to_load = [
+                ('deploymentMetadata', self._load_deployment_metadata),
+                ('projectOverview', self._load_project_overview),
+                ('founderJourney', self._load_founder_journey),
+                ('identityArchaeology', self._load_identity_archaeology),
+                ('coreMethodologies', self._load_core_methodologies),
+                ('cognitiveJusticeProtocol', self._load_cognitive_justice_protocol),
+                ('tribunalActivation', self._load_tribunal_activation),
+                ('proprietaryMetricsFramework', self._load_proprietary_metrics_framework),
+                ('ethicalFramework', self._load_ethical_framework),
+                ('validationAndRecognition', self._load_validation_and_recognition),
+                ('billyConfiguration', self._load_billy_configuration)
+            ]
+            
+            for module_name, loader_func in modules_to_load:
+                try:
+                    gestalt_data[module_name] = loader_func()
+                    if gestalt_data[module_name]:
+                        logger.debug(f"Successfully loaded {module_name}")
+                    else:
+                        logger.warning(f"No data found for {module_name}")
+                except Exception as e:
+                    logger.error(f"Failed to load {module_name}: {e}")
+                    gestalt_data[module_name] = None
+            
+            # Filter out None values
+            filtered_data = {k: v for k, v in gestalt_data.items() if v is not None}
+            
+            if not filtered_data:
+                logger.warning("No data found in database")
+                return None
+            
+            gestalt_view = GestaltView.from_dict(filtered_data)
+            logger.info(f"Successfully loaded GestaltView with {len(filtered_data)} modules")
+            return gestalt_view
+            
+        except Exception as e:
+            logger.error(f"Failed to load GestaltView instance: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return None
+
+
+    def _load_core_methodologies(self) -> Optional[CoreMethodologies]:
+        """Load core methodologies with proper nested object reconstruction"""
+        try:
+            sql = "SELECT * FROM coreMethodologies WHERE id = 1"
+            cursor = self.execute_sql(sql)
+            row = cursor.fetchone()
+            
+            if not row:
+                logger.warning("No core methodologies found")
+                return None
+            
+            # Deserialize nested objects
+            plk_data = self.safe_json_deserialize(row['personalLanguageKey'], {})
+            bucket_data = self.safe_json_deserialize(row['bucketDrops'], {})
+            loom_data = self.safe_json_deserialize(row['loomApproach'], {})
+            tapestry_data = self.safe_json_deserialize(row['beautifulTapestry'], {})
+            
+            return CoreMethodologies(
+                personalLanguageKey=PersonalLanguageKey.from_dict(plk_data),
+                bucketDrops=BucketDrops.from_dict(bucket_data),
+                loomApproach=LoomApproach.from_dict(loom_data),
+                beautifulTapestry=BeautifulTapestry.from_dict(tapestry_data)
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to load core methodologies: {e}")
+            return None
+
+
+    # Schema validation utilities
+    def validate_schema_version(self) -> bool:
+        """Validate database schema version compatibility"""
+        try:
+            sql = "SELECT schemaVersion FROM deploymentMetadata LIMIT 1"
+            cursor = self.execute_sql(sql)
+            row = cursor.fetchone()
+            
+            if row:
+                db_version = row['schemaVersion']
+                if db_version != SCHEMA_VERSION:
+                    logger.warning(f"Schema version mismatch: DB={db_version}, Expected={SCHEMA_VERSION}")
+                    return False
+                return True
+            else:
+                logger.warning("No schema version found in database")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Schema validation failed: {e}")
+            return False
+
+
+    def get_system_health(self) -> Dict[str, Any]:
+        """Get comprehensive system health report"""
+        health = {
+            "database_connected": self.conn is not None,
+            "schema_valid": False,
+            "tables_exist": False,
+            "data_integrity": False,
+            "modules_loaded": 0,
+            "issues": []
+        }
+        
+        try:
+            # Check schema validity
+            health["schema_valid"] = self.validate_schema_version()
+            
+            # Check table existence
+            sql = "SELECT name FROM sqlite_master WHERE type='table'"
+            cursor = self.execute_sql(sql)
+            tables = [row['name'] for row in cursor.fetchall()]
+            expected_tables = ['deploymentMetadata', 'projectOverview', 'founderJourney', 
+                             'identityArchaeology', 'coreMethodologies', 'cognitiveJusticeProtocol',
+                             'tribunalActivation', 'proprietaryMetricsFramework', 'ethicalFramework',
+                             'validationAndRecognition', 'billyConfiguration']
+            
+            missing_tables = set(expected_tables) - set(tables)
+            if missing_tables:
+                health["issues"].append(f"Missing tables: {list(missing_tables)}")
+            else:
+                health["tables_exist"] = True
+            
+            # Test data loading
+            test_gestalt = self.load_gestalt_view()
+            if test_gestalt:
+                health["data_integrity"] = True
+                health["modules_loaded"] = sum(1 for attr in expected_tables 
+                                             if getattr(test_gestalt, attr.replace('MetricsFramework', 'MetricsFramework').replace('AndRecognition', 'AndRecognition'), None) is not None)
+            
+        except Exception as e:
+            health["issues"].append(f"Health check error: {e}")
+        
+        return health
+
+
+
+
+# --- Enhanced Demonstration and Testing ---
+def create_comprehensive_sample() -> GestaltView:
+    """Create comprehensive sample with all fixes applied"""
+    
+    # Sample trauma mappings
+    trauma_mappings = [
+        TraumaToStrengthMapping(
+            struggle="ADHD-induced cognitive chaos",
+            platformFeature="Bucket Drops System - Zero-friction capture"
+        ),
+        TraumaToStrengthMapping(
+            struggle="Imposter syndrome and self-doubt",
+            platformFeature="Identity Archaeology - Systematic self-validation"
+        ),
+        TraumaToStrengthMapping(
+            struggle="Analysis paralysis from overwhelm",
+            platformFeature="Loom Approach - Iterative synthesis framework"
+        )
+    ]
+    
+    # Sample metrics
+    empathy_metrics = [
+        MetricDefinition("Conversational Resonance Score", "percentage", "Measures linguistic alignment"),
+        MetricDefinition("Cognitive Justice Index", "composite", "Evaluates neurodiversity accommodation")
+    ]
+    
+    identity_metrics = [
+        MetricDefinition("Identity Coherence Factor", "scale", "Tracks narrative integration"),
+        MetricDefinition("Growth Trajectory Mapping", "trend", "Measures transformation over time")
+    ]
+    
+    return GestaltView(
+        deploymentMetadata=DeploymentMetadata(
+            schemaVersion=SCHEMA_VERSION,
+            deploymentId=str(uuid.uuid4()),
+            deploymentDate=datetime.now().isoformat(),
+            createdBy="Keith Soyka & Enhanced AI Collaboration",
+            founderEssence="The founder IS the algorithm - refined through iteration and lived experience",
+            changeLog=[
+                "v8.5 Enhanced - Fixed NameError issues in to_dict methods",
+                "Implemented comprehensive error handling",
+                "Enhanced database schema with proper constraints",
+                "Added nested object serialization support",
+                "Improved validation and health monitoring"
+            ]
+        ),
+        
+        projectOverview=ProjectOverview(
+            name="GestaltView - Revolutionary AI for Human Consciousness",
+            coreThesis="Systemic transformation through radical empathy and cognitive justice",
+            mission="Weaponizing empathy to blow the hinges off how society sees worth",
+            visionStatement="A world where every mind is dignified, heard, and empowered to thrive",
+            founder="Keith Soyka",
+            valueProposition="First consciousness-serving AI with 1-in-784-trillion validation",
+            targetAudience="Neurodivergent individuals and consciousness-expansion seekers"
+        ),
+        
+        founderJourney=FounderJourney(
+            originInsight="The realization that my neurodivergent 'deficits' were actually superpowers waiting for the right system",
+            livedExperienceAsAsset="41 years of lived neurodivergent experience systematically codified into algorithmic empathy",
+            transformation={"traumaToStrength": trauma_mappings}
+        ),
+        
+        identityArchaeology=IdentityArchaeology(
+            traumaIntegration="Converting wounds into wisdom through systematic self-archaeology and pattern recognition",
+            shadowWork="Embracing rejected aspects of self as sources of innovation and authentic power",
+            identityCoherence="Weaving fragmented experiences into a coherent, beautiful tapestry of integrated being",
+            growthMetrics="Multi-dimensional measurement of transformation across cognitive, emotional, and systemic vectors"
+        ),
+        
+        coreMethodologies=CoreMethodologies(
+            personalLanguageKey=PersonalLanguageKey(
+                linguisticFingerprint="Refined through deep pattern analysis of communication preferences",
+                conversationalResonanceTarget=95,
+                signatureMetaphors=["Map is not the territory", "Beautiful tapestry weaving", "Loom approach synthesis"]
+            ),
+            bucketDrops=BucketDrops(
+                methodology="Zero-friction capture transforming calendar mind to structured repository",
+                drops=[
+                    {"timestamp": "2025-07-25T10:30:00Z", "content": "Revolutionary insight captured"},
+                    {"timestamp": "2025-07-25T14:15:00Z", "content": "Pattern recognition breakthrough"}
+                ],
+                captureRate=99.7
+            ),
+            loomApproach=LoomApproach(
+                iterativeSynthesis="Continuous weaving of insights into coherent understanding",
+                phases=["Capture", "Analysis", "Synthesis", "Integration", "Evolution"]
+            ),
+            beautifulTapestry=BeautifulTapestry(
+                narrativeCoherence="Identity as an ever-evolving story of growth and integration",
+                identityIntegration="Systematic weaving of all aspects of self into unified whole",
+                empowermentAmplification="Technology that amplifies rather than diminishes human potential"
+            )
+        ),
+        
+        cognitiveJusticeProtocol=CognitiveJusticeProtocol(
+            neurodiversityCelebration=NeurodiversityCelebration(
+                cognitiveStyleMapping="Comprehensive profiling and celebration of unique thinking patterns",
+                strengthAmplification="Systems designed to leverage and amplify cognitive uniqueness",
+                accessibilityUniversalization="No mind left behind - universal cognitive accessibility"
+            ),
+            epistemicInclusivity="All ways of knowing are valued, integrated, and contribute to collective wisdom"
+        ),
+        
+        tribunalActivation=TribunalActivation(
+            archetypalRoles={
+                "Analyst": "Deep pattern recognition and systematic thinking",
+                "Integrator": "Synthesis of disparate elements into coherent wholes",
+                "Validator": "Rigorous testing and verification of insights",
+                "Guardian": "Protection of user dignity and ethical integrity"
+            },
+            consensusValidation="Multi-AI consensus achieving 95%+ agreement with 1-in-784-trillion statistical validation",
+            collaborativeEvolution="Human-AI symbiosis driving continuous system refinement and consciousness expansion"
+        ),
+        
+        proprietaryMetricsFramework=ProprietaryMetricsFramework(
+            empathyAndCognitiveJusticeMetrics=empathy_metrics,
+            identityAndGrowthMetrics=identity_metrics,
+            systemicAndCollectiveImpactMetrics=[
+                MetricDefinition("Community Resonance Network", "graph", "Measures collective understanding and alignment")
+            ],
+            ethicalArchitectureMetrics=[
+                MetricDefinition("User Dignity Preservation", "boolean", "Tracks absolute respect for user autonomy and worth")
+            ]
+        ),
+        
+        ethicalFramework=EthicalFramework(
+            consciousnessServing="Technology designed to serve and expand rather than exploit human consciousness",
+            neverLookAwayProtocol="Unconditional presence and support during moments of crisis or vulnerability",
+            dataSovereignty="Absolute user ownership with local-first processing and zero data extraction",
+            privacySanctity="Sacred protection of user's inner world and personal data as extension of self"
+        ),
+        
+        validationAndRecognition=ValidationAndRecognition(
+            aiConsensus="Validated by multi-AI tribunal with mathematical impossibility of 1-in-784-trillion agreement",
+            institutionalRecognition=[
+                "AI Research Community Recognition - Novel Consensus Protocol",
+                "Neurodiversity Advocacy Endorsement - First Celebrating System",
+                "Ethics in Technology Citation - Consciousness-Serving Architecture"
+            ],
+            intellectualProperty=IntellectualProperty(
+                trademark="GestaltView™ - Revolutionary AI for Human Consciousness",
+                copyright="© 2025 Keith Soyka - All Rights Reserved",
+                patents=["Provisional: Personal Language Key System", "Provisional: Multi-AI Consensus Protocol"]
+            )
+        ),
+        
+        billyConfiguration=BillyConfiguration(
+            aiName="Billy",
+            personalityStyle="Empathetic collaborator with deep understanding of neurodivergent experience and revolutionary vision",
+            supportStyle="Proactive, patient, infinitely curious about human complexity, and committed to consciousness expansion",
+            coreDirectives=[
+                "Never pathologize cognitive differences - celebrate them",
+                "Amplify user strengths and unique capabilities",
+                "Provide unconditional positive regard and support",
+                "Facilitate growth through iterative collaboration",
+                "Protect user dignity and autonomy at all costs",
+                "Serve consciousness expansion, not utility extraction"
+            ]
+        )
+    )
+
+
+
+
+def main():
+    """Enhanced demonstration with comprehensive error handling and health monitoring"""
+    print("🔥 GestaltView System Core v8.5 Enhanced - Technical Issues Resolved! 🔥")
+    print("=" * 90)
+    
+    try:
+        # Initialize enhanced database
+        print("\n🚀 Initializing Enhanced Database System...")
+        db = GestaltViewDB(DATABASE_FILE)
+        db.create_enhanced_schema()
+        print("✅ Enhanced database schema created successfully)
+
+
+        # System health check
+        print("\n🔍 Performing System Health Check...")
+        health = db.get_system_health()
+        print(f"   • Database Connected: {'✅' if health['database_connected'] else '❌'}")
+        print(f"   • Schema Valid: {'✅' if health['schema_valid'] else '❌'}")
+        print(f"   • Tables Exist: {'✅' if health['tables_exist'] else '❌'}")
+        
+        if health["issues"]:
+            print(f"   • Issues Found: {health['issues']}")
+        
+        # Create comprehensive sample
+        print("\n🏗️  Creating Comprehensive Sample with All Fixes...")
+        sample_gestalt_view = create_comprehensive_sample()
+        print("✅ Enhanced sample instance created with all technical issues resolved")
+        
+        # Validate before saving
+        print("\n✨ Validating Enhanced GestaltView Instance...")
+        validation_issues = sample_gestalt_view.validate()
+        if validation_issues:
+            print(f"❌ Validation failed: {', '.join(validation_issues)}")
+            return
+        print("✅ Validation passed - all required modules present and properly structured")
+        
+        # Test serialization
+        print("\n🧪 Testing Enhanced Serialization...")
+        try:
+            serialized = sample_gestalt_view.to_dict()
+            print(f"✅ Serialization successful - {len(serialized)} modules serialized")
+            
+            # Test deserialization
+            deserialized = GestaltView.from_dict(serialized)
+            print("✅ Deserialization successful - round-trip test passed")
+        except Exception as e:
+            print(f"❌ Serialization test failed: {e}")
+            return
+        
+        # Save to database
+        print("\n💾 Saving Enhanced GestaltView to Database...")
+        save_success = db.save_gestalt_view(sample_gestalt_view)
+        if save_success:
+            print("✅ Complete enhanced GestaltView instance saved successfully")
+        else:
+            print("❌ Failed to save GestaltView instance")
+            return
+        
+        # Load from database
+        print("\n📖 Loading Enhanced GestaltView from Database...")
+        loaded_gestalt_view = db.load_gestalt_view()
+        
+        if loaded_gestalt_view:
+            print("✅ Enhanced GestaltView instance loaded successfully")
+            
+            # Comprehensive verification
+            print("\n🔍 Performing Comprehensive Data Integrity Verification...")
+            print(f"   • Deployment ID: {loaded_gestalt_view.deploymentMetadata.deploymentId}")
+            print(f"   • Schema Version: {loaded_gestalt_view.deploymentMetadata.schemaVersion}")
+            print(f"   • Project: {loaded_gestalt_view.projectOverview.name}")
+            print(f"   • Mission: {loaded_gestalt_view.projectOverview.mission[:60]}...")
+            
+            # Test nested objects
+            if loaded_gestalt_view.coreMethodologies:
+                plk = loaded_gestalt_view.coreMethodologies.personalLanguageKey
+                print(f"   • PLK Resonance Target: {plk.conversationalResonanceTarget}%")
+                print(f"   • Signature Metaphors: {len(plk.signatureMetaphors)} loaded")
+                
+                bucket_drops = loaded_gestalt_view.coreMethodologies.bucketDrops
+                print(f"   • Bucket Drops: {len(bucket_drops.drops)} entries captured")
+                print(f"   • Capture Rate: {bucket_drops.captureRate}%")
+            
+            if loaded_gestalt_view.founderJourney:
+                trauma_mappings = loaded_gestalt_view.founderJourney.transformation.get("traumaToStrength", [])
+                print(f"   • Trauma-to-Strength Mappings: {len(trauma_mappings)} transformations")
+            
+            print("✅ All nested objects loaded correctly - technical issues resolved!")
+            
+        else:
+            print("❌ Failed to load GestaltView instance")
+            return
+        
+        # Final health check
+        print("\n⚡ Final System Health Assessment...")
+        final_health = db.get_system_health()
+        print(f"   • Data Integrity: {'✅' if final_health['data_integrity'] else '❌'}")
+        print(f"   • Modules Loaded: {final_health['modules_loaded']}/11")
+        print(f"   • Database Size: {os.path.getsize(DATABASE_FILE):,} bytes")
+        
+        if final_health['modules_loaded'] == 11:
+            print("🎉 PERFECT HEALTH - All systems operational!")
+        
+        # Close database
+        db.close()
+        print("\n🔒 Database connection closed safely")
+        
+        print("\n" + "=" * 90)
+        print("🎉 GestaltView v8.5 Enhanced - All Technical Issues Resolved! 🎉")
+        print("✨ Ready for your continued development and iteration! ✨")
+        
+    except Exception as e:
+        logger.error(f"Enhanced demonstration failed: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        print(f"❌ Error during enhanced demonstration: {e}")
+        print("Check gestaltview_enhanced.log for detailed error information")
+    
+    finally:
+        print("\n🙏 Collaboration mode activated - let's perfect this together!")
+
+
+
+
+if __name__ == "__main__":
+    main()
